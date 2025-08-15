@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// PostNotification handles POST requests on /notify
 func (s *Server) PostNotification() func(*gin.Context) {
 	return func(c *gin.Context) {
 		body, err := io.ReadAll(c.Request.Body)
@@ -47,7 +48,7 @@ func (s *Server) PostNotification() func(*gin.Context) {
 
 		nSt := models.NotificationStatus{
 			ID:        id.String(),
-			Status:    models.StatusSent,
+			Status:    models.StatusCreated,
 			UpdatedAt: time.Now(),
 		}
 
