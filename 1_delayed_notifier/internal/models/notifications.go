@@ -3,26 +3,36 @@ package models
 import "time"
 
 const (
-	StatusCreated = iota + 1
-	StatusSent
-	StatusReceived
-	StatusCanceled
+	StatusCreated  = "created"
+	StatusSent     = "sent"
+	StatusReceived = "received"
+	StatusCanceled = "canceled"
 )
 
 const (
-	ChannelEmail = iota + 1
-	ChannelTelegram
+	ChannelEmail    = "email"
+	ChannelTelegram = "telegram"
 )
 
-type Notification struct {
-	ID        int64     `json:"id,omitempty"`
-	UserID    int64     `json:"user_id"`
-	ChannelID int64     `json:"channel_id"`
+type NotificationCreate struct {
 	SendAt    time.Time `json:"send_at"`
-	Payload   payload   `json:"payload"`
+	Channel   string    `json:"channel"`
+	Recipient string    `json:"recipient"`
+	Message   string    `json:"message"`
 }
 
-type payload struct {
-	Subject string `json:"subject"`
-	Body    string `json:"body"`
+type Notification struct {
+	ID        string    `json:"id"`
+	SendAt    time.Time `json:"send_at"`
+	Channel   string    `json:"channel"`
+	Recipient string    `json:"recipient"`
+	Message   string    `json:"message"`
+	Attempt   int       `json:"attempt"`
+}
+
+type NotificationStatus struct {
+	ID        string    `json:"id"`
+	Status    string    `json:"status"`
+	Error     string    `json:"error,omitempty"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
