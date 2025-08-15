@@ -4,11 +4,15 @@ import (
 	"context"
 	"delayed-notifier/internal/broker/rabbitmq"
 	"delayed-notifier/internal/handlers"
+	"delayed-notifier/internal/sender/telegram"
 	"delayed-notifier/internal/storage/redis"
+	"delayed-notifier/internal/worker"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/wb-go/wbf/config"
@@ -20,7 +24,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	zlog.Init()
-	log := zlog.Logger
+	log := &zlog.Logger
 	log.Debug().Msg("debug enabled")
 
 	cfg := config.New()
@@ -41,6 +45,22 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to connect to redis")
 		os.Exit(1)
 	}
+
+	timeout := cfg.GetString("telegram.timeout")
+	timeoutDuration, err := time.ParseDuration(timeout)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to parse http.timeout")
+		os.Exit(1)
+	}
+	bot, err := telegram.New(os.Getenv("TELEGRAM_API_TOKEN"), timeoutDuration)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to connect to telegram")
+		os.Exit(1)
+	}
+
+	w := worker.New(rmq, r, log, bot)
+	wg := new(sync.WaitGroup)
+	w.Start(ctx, wg)
 
 	s := handlers.NewServer(rmq, r)
 
@@ -74,5 +94,6 @@ func main() {
 	}
 
 	rmq.Close()
+	wg.Wait()
 
 }

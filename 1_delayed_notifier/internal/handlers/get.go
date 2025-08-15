@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GetNotification handles GET requests on /notify/{id}
 func (s *Server) GetNotification() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		id := c.Param("id")

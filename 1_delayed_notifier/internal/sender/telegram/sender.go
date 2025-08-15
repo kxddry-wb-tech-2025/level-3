@@ -13,6 +13,7 @@ import (
 
 const baseURL = "https://api.telegram.org/bot"
 
+// Sender is a structure representing a Telegram bot that can send messages.
 type Sender struct {
 	token string
 	http  *http.Client
