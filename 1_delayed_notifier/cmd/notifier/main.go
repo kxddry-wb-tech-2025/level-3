@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wb-go/wbf/config"
-	"github.com/wb-go/wbf/ginext"
-	"github.com/wb-go/wbf/zlog"
+	"github.com/kxddry/wbf/config"
+	"github.com/kxddry/wbf/ginext"
+	"github.com/kxddry/wbf/zlog"
 )
 
 func main() {

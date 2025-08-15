@@ -3,7 +3,7 @@ package storage
 import (
 	"time"
 
-	"github.com/wb-go/wbf/retry"
+	"github.com/kxddry/wbf/retry"
 )
 
 // Strategy outlines the way different components should do backoff.
