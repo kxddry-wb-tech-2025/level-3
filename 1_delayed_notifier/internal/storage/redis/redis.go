@@ -10,10 +10,12 @@ import (
 	"github.com/wb-go/wbf/redis"
 )
 
+// Storage implements the StatusStorage interfaces for storing statuses
 type Storage struct {
 	rdb *redis.Client
 }
 
+// New creates a Storage
 func New(ctx context.Context, addr, password string, db int) (*Storage, error) {
 	s := new(Storage)
 	s.rdb = redis.New(addr, password, db)
@@ -26,11 +28,13 @@ func New(ctx context.Context, addr, password string, db int) (*Storage, error) {
 
 func (s *Storage) key(id string) string { return "notif:" + id }
 
+// Set sets a new notification to Redis
 func (s *Storage) Set(ctx context.Context, st models.NotificationStatus) error {
 	data, _ := json.Marshal(st)
 	return s.rdb.SetWithRetry(ctx, storage.Strategy, s.key(st.ID), data)
 }
 
+// Cancel cancels a notification
 func (s *Storage) Cancel(ctx context.Context, id string) error {
 	return s.Set(ctx, models.NotificationStatus{
 		ID:        id,
@@ -39,6 +43,7 @@ func (s *Storage) Cancel(ctx context.Context, id string) error {
 	})
 }
 
+// Get returns a notification.
 func (s *Storage) Get(ctx context.Context, id string) (*models.NotificationStatus, error) {
 	val, err := s.rdb.GetWithRetry(ctx, storage.Strategy, s.key(id))
 	if err != nil {
