@@ -16,7 +16,7 @@ type Storage struct {
 	db *dbpg.DB
 }
 
-func NewStorage(db *dbpg.DB) *Storage {
+func New(db *dbpg.DB) *Storage {
 	return &Storage{
 		db: db,
 	}
@@ -24,7 +24,7 @@ func NewStorage(db *dbpg.DB) *Storage {
 
 func (s *Storage) Add(ctx context.Context, notify *models.Notification) (int64, error) {
 	res, err := s.db.ExecWithRetry(ctx, strat,
-		`INSERT INTO notifications (user_id, channel_id, send_at, subject, body) VALUES ($1, $2, $3) RETURNING id`,
+		`INSERT INTO notifications (user_id, channel_id, send_at, subject, body) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
 		notify.UserID, notify.ChannelID, notify.SendAt, notify.Payload.Subject, notify.Payload.Body)
 	if err != nil {
 		return 0, err
