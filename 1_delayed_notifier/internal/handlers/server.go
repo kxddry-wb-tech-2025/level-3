@@ -10,6 +10,7 @@ type Publisher interface {
 }
 
 type StatusStorage interface {
+	Cancel(ctx context.Context, id string) error
 	Set(ctx context.Context, st models.NotificationStatus) error
 	Get(ctx context.Context, id string) (*models.NotificationStatus, error)
 }
