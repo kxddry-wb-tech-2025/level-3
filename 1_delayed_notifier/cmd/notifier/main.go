@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"delayed-notifier/internal/broker/rabbitmq"
+	"delayed-notifier/internal/storage/redis"
 	"os"
 
 	"github.com/wb-go/wbf/config"
@@ -47,11 +48,8 @@ func main() {
 		MaxIdleConns: 5,
 	}
 
-	db, err := dbpg.New(cfg.GetString("storage.dsn"), nil, psqlOpts)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to connect to database")
-		os.Exit(1)
-	}
+	r := redis.New()
+	_ = db
 
 	engine := ginext.New()
 	_ = engine.SetTrustedProxies(nil) // disable warning
