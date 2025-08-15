@@ -15,6 +15,7 @@ const (
 )
 
 type Notification struct {
+	ID        int64     `json:"id,omitempty"`
 	UserID    int64     `json:"user_id"`
 	ChannelID int64     `json:"channel_id"`
 	SendAt    time.Time `json:"send_at"`
