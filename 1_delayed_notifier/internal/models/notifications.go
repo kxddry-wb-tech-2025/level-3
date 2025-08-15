@@ -7,6 +7,7 @@ const (
 	StatusSent     = "sent"
 	StatusReceived = "received"
 	StatusCanceled = "canceled"
+	StatusFailed   = "failed"
 )
 
 const (

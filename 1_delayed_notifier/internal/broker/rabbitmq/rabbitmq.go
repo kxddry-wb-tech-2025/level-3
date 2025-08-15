@@ -76,7 +76,7 @@ func (r *RabbitMQ) PublishDelayed(ctx context.Context, n models.Notification) er
 	body, _ := json.Marshal(n)
 	var exp string
 	if n.SendAt.Before(time.Now()) {
-		exp = strconv.FormatInt((300 * time.Second).Milliseconds(), 10) // 5 minutes
+		exp = "0"
 	} else {
 		exp = strconv.FormatInt(n.SendAt.Sub(time.Now()).Milliseconds(), 10)
 	}
