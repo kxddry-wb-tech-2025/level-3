@@ -5,6 +5,7 @@ import (
 	"delayed-notifier/internal/models"
 	"delayed-notifier/internal/storage"
 	"encoding/json"
+	"time"
 
 	"github.com/wb-go/wbf/redis"
 )
@@ -24,6 +25,14 @@ func (s *Storage) key(id string) string { return "notif:" + id }
 func (s *Storage) Set(ctx context.Context, st models.NotificationStatus) error {
 	data, _ := json.Marshal(st)
 	return s.rdb.SetWithRetry(ctx, storage.Strategy, s.key(st.ID), data)
+}
+
+func (s *Storage) Cancel(ctx context.Context, id string) error {
+	return s.Set(ctx, models.NotificationStatus{
+		ID:        id,
+		Status:    models.StatusCanceled,
+		UpdatedAt: time.Time{},
+	})
 }
 
 func (s *Storage) Get(ctx context.Context, id string) (*models.NotificationStatus, error) {
