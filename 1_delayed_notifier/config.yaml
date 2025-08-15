@@ -2,11 +2,11 @@ server:
   address: localhost:8080
 
 rabbitmq:
-  dsn: //example//
+  dsn: amqp://guest:guest@localhost:5672/
 
 redis:
-  address: localhost:5431
-  password: example
+  address: localhost:6379
+  password: ""
 
 telegram:
   timeout: 10s
