@@ -50,7 +50,9 @@ func (r *RabbitMQ) setup() error {
 	if err := r.ch.ExchangeDeclare(exchangeReady, "fanout", true, false, false, false, nil); err != nil {
 		return err
 	}
-	if _, err := r.ch.QueueDeclare(queueReady, true, false, false, false, nil); err != nil {
+
+	readyArgs := amqp.Table{"x-queue-type": "classic"}
+	if _, err := r.ch.QueueDeclare(queueReady, true, false, false, false, readyArgs); err != nil {
 		return err
 	}
 	if err := r.ch.QueueBind(queueReady, "", exchangeReady, false, nil); err != nil {
@@ -59,6 +61,8 @@ func (r *RabbitMQ) setup() error {
 	// Очередь delayed с DLX на ready exchange
 	args := amqp.Table{
 		"x-dead-letter-exchange": exchangeReady,
+		"x-queue-type":           "classic",
+		"x-delayed-type":         "direct",
 	}
 	if _, err := r.ch.QueueDeclare(queueDelayed, true, false, false, false, args); err != nil {
 		return err
@@ -93,6 +97,7 @@ func (r *RabbitMQ) PublishDelayed(ctx context.Context, n models.Notification) er
 		Expiration:   exp,
 		Headers: amqp.Table{
 			"x-attempt": n.Attempt,
+			"x-delay":   exp,
 		},
 		Timestamp: time.Now(),
 		MessageId: n.ID,

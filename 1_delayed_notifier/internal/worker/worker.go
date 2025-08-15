@@ -106,6 +106,7 @@ func (w *Worker) handle(ctx context.Context, msg models.Notification) {
 
 func (w *Worker) retry(ctx context.Context, msg models.Notification) {
 	err := retry.Do(func() error {
+		msg.SendAt = time.Now().Add(storage.Strategy.Delay)
 		return w.b.PublishDelayed(ctx, msg)
 	}, storage.Strategy)
 	if err != nil {
