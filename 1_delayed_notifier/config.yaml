@@ -8,3 +8,5 @@ redis:
   address: localhost:5431
   password: example
 
+telegram:
+  timeout: 10s

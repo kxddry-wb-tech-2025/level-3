@@ -33,7 +33,10 @@ type Worker struct {
 	log     *zerolog.Logger
 }
 
-func New(b Broker, st StatusStore, log *zerolog.Logger, senders []Sender) *Worker {
+func New(b Broker, st StatusStore, log *zerolog.Logger, senders ...Sender) *Worker {
+	if len(senders) == 0 {
+		panic("must specify at least one sender")
+	}
 	m := map[string]Sender{}
 	for _, s := range senders {
 		m[s.Name()] = s

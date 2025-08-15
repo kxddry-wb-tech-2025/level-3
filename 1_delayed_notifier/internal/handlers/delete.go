@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// DeleteNotification handles DELETE requests on /notify/{id}
 func (s *Server) DeleteNotification() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		id := c.Param("id")
