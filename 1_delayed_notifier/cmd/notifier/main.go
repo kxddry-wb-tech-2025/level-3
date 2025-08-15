@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"delayed-notifier/internal/broker/rabbitmq"
+	"delayed-notifier/internal/handlers"
 	"delayed-notifier/internal/storage/redis"
 	"os"
 
 	"github.com/wb-go/wbf/config"
-	"github.com/wb-go/wbf/dbpg"
 	"github.com/wb-go/wbf/ginext"
 	"github.com/wb-go/wbf/zlog"
 )
@@ -32,27 +32,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	rmq, err := rabbitmq.New(rmqDsn, "notify")
+	rmq, err := rabbitmq.New(cfg.GetString("rabbitmq.dsn"))
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to rabbitmq")
 		os.Exit(1)
 	}
 
-	_ = rmq
+	r, err := redis.New(ctx, cfg.GetString("redis.address"), cfg.GetString("redis.password"), 0)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to connect to redis")
+		os.Exit(1)
+	}
+
+	s := handlers.NewServer(rmq, r)
 
 	addr := cfg.GetString("server.address")
 	log.Debug().Str("address", addr).Msg("Starting server")
 
-	psqlOpts := &dbpg.Options{
-		MaxOpenConns: 10,
-		MaxIdleConns: 5,
-	}
-
-	r := redis.New()
-	_ = db
-
 	engine := ginext.New()
 	_ = engine.SetTrustedProxies(nil) // disable warning
+
+	engine.GET("/notify/{id}", s.GetNotification())
+	engine.POST("/notify", s.PostNotification())
+	engine.DELETE("/notify/{id}", s.DeleteNotification())
 
 	if err := engine.Run(addr); err != nil {
 		log.Fatal().Err(err).Msg("Failed to start server")
