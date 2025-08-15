@@ -64,22 +64,21 @@ func main() {
 
 	s := handlers.NewServer(rmq, r)
 
-	addr := cfg.GetString("server.address")
-	log.Debug().Str("address", addr).Msg("Starting server")
-
 	engine := ginext.New()
 	_ = engine.SetTrustedProxies(nil) // disable warning
+	engine.LoadHTMLFiles("./static/index.html")
 
-	engine.GET("/notify/{id}", s.GetNotification())
+	engine.GET("/notify/:id", s.GetNotification())
 	engine.POST("/notify", s.PostNotification())
-	engine.DELETE("/notify/{id}", s.DeleteNotification())
+	engine.DELETE("/notify/:id", s.DeleteNotification())
 	engine.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"title": "Main website",
 		})
 	})
-	engine.Static("/", "./static/index.html")
 
+	addr := cfg.GetString("server.address")
+	log.Debug().Str("address", addr).Msg("Starting server")
 	if err := engine.Run(addr); err != nil {
 		log.Fatal().Err(err).Msg("Failed to start server")
 		os.Exit(1)
