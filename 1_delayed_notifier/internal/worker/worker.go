@@ -11,21 +11,25 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
+// Broker can be something like Kafka streams or RabbitMQ. It's used for working with delayed notifications.
 type Broker interface {
 	PublishDelayed(ctx context.Context, n models.Notification) error
 	GetReady(ctx context.Context) (<-chan models.Notification, error)
 }
 
+// StatusStore is used as an interface to store and get statuses
 type StatusStore interface {
 	Set(ctx context.Context, st models.NotificationStatus) error
 	Get(ctx context.Context, id string) (*models.NotificationStatus, error)
 }
 
+// Sender is something that can send notifications
 type Sender interface {
 	Send(ctx context.Context, n models.Notification) error
 	Name() string
 }
 
+// Worker is a structure for working with delayed notifications and sending them over
 type Worker struct {
 	b       Broker
 	store   StatusStore
@@ -33,6 +37,7 @@ type Worker struct {
 	log     *zerolog.Logger
 }
 
+// New creates a new Worker
 func New(b Broker, st StatusStore, log *zerolog.Logger, senders ...Sender) *Worker {
 	if len(senders) == 0 {
 		panic("must specify at least one sender")
@@ -49,6 +54,7 @@ func New(b Broker, st StatusStore, log *zerolog.Logger, senders ...Sender) *Work
 	}
 }
 
+// Start starts the worker and sets it into work in a separate goroutine
 func (w *Worker) Start(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
