@@ -35,7 +35,7 @@ func (s *Storage) Add(ctx context.Context, notify *models.Notification) (int64, 
 // Cancel cancels a notification
 // StatusCanceled = 4 here, if it changes, have to change it here too.
 func (s *Storage) Cancel(ctx context.Context, id int64) error {
-	res, err := s.db.ExecWithRetry(ctx, strat, `UPDATE notifications SET status = 4 WHERE id = $1`, id)
+	res, err := s.db.ExecWithRetry(ctx, strat, `UPDATE notifications SET status = $1 WHERE id = $2`, models.StatusCanceled, id)
 	if err != nil {
 		return err
 	}
