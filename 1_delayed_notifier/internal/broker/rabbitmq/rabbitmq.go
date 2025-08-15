@@ -17,11 +17,13 @@ const (
 	queueDelayed  = "delayed_notifier.delayed"
 )
 
+// RabbitMQ implements the Broker interface and can register delayed notifications
 type RabbitMQ struct {
 	conn *amqp.Connection
 	ch   *amqp.Channel
 }
 
+// New creates a RabbitMQ instance.
 func New(url string) (*RabbitMQ, error) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
@@ -63,6 +65,7 @@ func (r *RabbitMQ) setup() error {
 	return nil
 }
 
+// Close closes the RabbitMQ instance.
 func (r *RabbitMQ) Close() {
 	if r.ch != nil {
 		_ = r.ch.Close()
