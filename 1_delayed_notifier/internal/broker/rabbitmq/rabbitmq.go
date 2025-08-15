@@ -75,6 +75,7 @@ func (r *RabbitMQ) Close() {
 	}
 }
 
+// PublishDelayed publishes a models.Notification to a delayed queue
 func (r *RabbitMQ) PublishDelayed(ctx context.Context, n models.Notification) error {
 	body, _ := json.Marshal(n)
 	var exp string
@@ -97,6 +98,7 @@ func (r *RabbitMQ) PublishDelayed(ctx context.Context, n models.Notification) er
 	})
 }
 
+// GetReady returns a channel of ready-to-go notifications.
 func (r *RabbitMQ) GetReady(ctx context.Context) (<-chan models.Notification, error) {
 	ch, err := r.ch.Consume(queueReady, "", false, false, false, false, nil)
 	if err != nil {
