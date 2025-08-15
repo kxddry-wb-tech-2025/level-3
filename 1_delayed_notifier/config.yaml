@@ -1,2 +1,10 @@
 server:
   address: localhost:8080
+
+rabbitmq:
+  dsn: //example//
+
+redis:
+  address: localhost:5431
+  password: example
+
