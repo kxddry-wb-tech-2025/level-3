@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"delayed-notifier/internal/models"
 	"encoding/json"
 	"io"
@@ -9,19 +10,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func CreateNotification() func(*gin.Context) {
+func CreateNotification(ctx context.Context, db Storage) func(*gin.Context) {
 	return func(c *gin.Context) {
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		var note models.Notification
 
-		var note models.PostRequest
-		if err := json.Unmarshal(body, &note); err != nil {
+		if err = json.Unmarshal(body, &note); err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
+		id, err := db.Add(ctx, &note)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"id": id})
 	}
 }
