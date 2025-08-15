@@ -117,7 +117,7 @@ func (r *RabbitMQ) GetReady(ctx context.Context) (<-chan models.Notification, er
 					continue
 				}
 				out <- n
-				d.Ack(false)
+				_ = d.Ack(false)
 			}
 		}
 	}()
