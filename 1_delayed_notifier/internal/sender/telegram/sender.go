@@ -32,7 +32,7 @@ func New(token string, timeout time.Duration) (*Sender, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New(resp.Status)
 	}
@@ -63,7 +63,7 @@ func (s *Sender) Send(ctx context.Context, n models.Notification) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("telegram status %d", resp.StatusCode)
 	}
