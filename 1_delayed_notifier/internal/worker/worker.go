@@ -105,6 +105,15 @@ func (w *Worker) handle(ctx context.Context, msg models.Notification) {
 }
 
 func (w *Worker) retry(ctx context.Context, msg models.Notification) {
+	// increment attempt and compute exponential backoff based on configured strategy
+	msg.Attempt++
+	delay := storage.Strategy.Delay
+	for i := 0; i < msg.Attempt; i++ {
+		delay *= time.Duration(storage.Strategy.Backoff)
+	}
+	msg.SendAt = time.Now().Add(delay)
+
+	// Publish back to delayed queue; wrap with transient retry for broker errors
 	err := retry.Do(func() error {
 		return w.b.PublishDelayed(ctx, msg)
 	}, storage.Strategy)
