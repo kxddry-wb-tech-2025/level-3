@@ -5,9 +5,9 @@ go 1.24.5
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.6.0
+	github.com/kxddry/wbf v1.0.0
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/rs/zerolog v1.30.0
-	github.com/wb-go/wbf v0.0.1
 )
 
 require (

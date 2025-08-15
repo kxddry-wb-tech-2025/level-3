@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kxddry/wbf/retry"
 	"github.com/rs/zerolog"
-	"github.com/wb-go/wbf/retry"
 )
 
 // Broker can be something like Kafka streams or RabbitMQ. It's used for working with delayed notifications.

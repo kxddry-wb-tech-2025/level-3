@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/wb-go/wbf/redis"
+	"github.com/kxddry/wbf/redis"
 )
 
 // Storage implements the StatusStorage interfaces for storing statuses
