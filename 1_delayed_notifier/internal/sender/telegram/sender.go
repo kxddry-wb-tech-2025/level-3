@@ -46,7 +46,7 @@ func New(token string, timeout time.Duration) (*Sender, error) {
 
 func (s *Sender) Name() string { return models.ChannelTelegram }
 
-func (s *Sender) Send(ctx context.Context, n *models.Notification) error {
+func (s *Sender) Send(ctx context.Context, n models.Notification) error {
 	url := fmt.Sprintf("%s%s/sendMessage", baseURL, s.token)
 	payload := map[string]string{
 		"chat_id": n.Recipient, "text": n.Message,
