@@ -22,7 +22,7 @@ type StatusStore interface {
 }
 
 type Sender interface {
-	Send(ctx context.Context, n *models.Notification) error
+	Send(ctx context.Context, n models.Notification) error
 	Name() string
 }
 
@@ -83,8 +83,19 @@ func (w *Worker) handle(ctx context.Context, msg models.Notification) {
 	sender, ok := w.senders[msg.Channel]
 	if !ok {
 		w.log.Error().Msg(msg.Channel + " is not registered")
-		err = retry.Do(func() error {
+		w.retry(ctx, msg)
+	}
+	if err = sender.Send(ctx, msg); err != nil {
 
-		}, storage.Strategy)
+	}
+}
+
+func (w *Worker) retry(ctx context.Context, msg models.Notification) {
+	err := retry.Do(func() error {
+		return w.b.PublishDelayed(ctx, msg)
+	}, storage.Strategy)
+	if err != nil {
+		w.log.Error().Err(err).Msg(msg.Channel)
+		w.store.Set(ctx, models.NotificationStatus{ID: msg.ID, Status: models.StatusFailed, UpdatedAt: time.Now()})
 	}
 }
