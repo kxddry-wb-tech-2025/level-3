@@ -34,7 +34,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	rmq, err := rabbitmq.New(cfg.GetString("rabbitmq.dsn"))
+	rmq, err := rabbitmq.New(cfg.GetString("rabbitmq.dsn"), log)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to rabbitmq")
 		os.Exit(1)
