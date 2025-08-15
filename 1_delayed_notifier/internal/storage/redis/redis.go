@@ -14,10 +14,14 @@ type Storage struct {
 	rdb *redis.Client
 }
 
-func New(addr, password string, db int) *Storage {
-	return &Storage{
-		rdb: redis.New(addr, password, db),
+func New(ctx context.Context, addr, password string, db int) (*Storage, error) {
+	s := new(Storage)
+	s.rdb = redis.New(addr, password, db)
+
+	if err := s.rdb.Ping(ctx).Err(); err != nil {
+		return nil, err
 	}
+	return s, nil
 }
 
 func (s *Storage) key(id string) string { return "notif:" + id }
