@@ -59,6 +59,7 @@ func (w *Worker) Start(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		w.log.Info().Msg("Worker starting to consume messages...")
 		msgs, err := w.b.GetReady(ctx)
 		if err != nil {
 			w.log.Error().Err(err).Msg("worker consume error")

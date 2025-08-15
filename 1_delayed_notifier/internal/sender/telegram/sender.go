@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -68,7 +69,8 @@ func (s *Sender) Send(ctx context.Context, n models.Notification) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("telegram status %d", resp.StatusCode)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("telegram status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -20,10 +21,11 @@ const (
 type RabbitMQ struct {
 	conn *amqp.Connection
 	ch   *amqp.Channel
+	log  *zerolog.Logger
 }
 
 // New creates a RabbitMQ instance.
-func New(url string) (*RabbitMQ, error) {
+func New(url string, logger *zerolog.Logger) (*RabbitMQ, error) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		return nil, err
@@ -35,7 +37,7 @@ func New(url string) (*RabbitMQ, error) {
 		return nil, err
 	}
 
-	mq := &RabbitMQ{conn: conn, ch: ch}
+	mq := &RabbitMQ{conn: conn, ch: ch, log: logger}
 	if err := mq.setup(); err != nil {
 		_ = conn.Close()
 		_ = ch.Close()
@@ -83,6 +85,7 @@ func (r *RabbitMQ) PublishDelayed(ctx context.Context, n models.Notification) er
 	} else {
 		exp = strconv.FormatInt(time.Until(n.SendAt).Milliseconds(), 10)
 	}
+	r.log.Debug().Str("notification_id", n.ID).Str("expiration_ms", exp).Msg("Publishing delayed notification to RabbitMQ")
 	return r.ch.PublishWithContext(ctx, "", queueDelayed, false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		Body:         body,
