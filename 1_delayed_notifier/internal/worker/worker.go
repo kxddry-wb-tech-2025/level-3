@@ -86,8 +86,12 @@ func (w *Worker) handle(ctx context.Context, msg models.Notification) {
 		w.retry(ctx, msg)
 	}
 	if err = sender.Send(ctx, msg); err != nil {
-
+		w.log.Error().Err(err).Msg(msg.Channel)
+		w.retry(ctx, msg)
+		return
 	}
+
+	_ = w.store.Set(ctx, models.NotificationStatus{ID: msg.ID, Status: models.StatusSent, UpdatedAt: time.Now()})
 }
 
 func (w *Worker) retry(ctx context.Context, msg models.Notification) {
@@ -96,6 +100,11 @@ func (w *Worker) retry(ctx context.Context, msg models.Notification) {
 	}, storage.Strategy)
 	if err != nil {
 		w.log.Error().Err(err).Msg(msg.Channel)
-		w.store.Set(ctx, models.NotificationStatus{ID: msg.ID, Status: models.StatusFailed, UpdatedAt: time.Now()})
+		err = retry.Do(func() error {
+			return w.store.Set(ctx, models.NotificationStatus{ID: msg.ID, Status: models.StatusFailed, UpdatedAt: time.Now()})
+		}, storage.Strategy)
+		if err != nil {
+			w.log.Error().Err(err).Msg(msg.Channel)
+		}
 	}
 }
