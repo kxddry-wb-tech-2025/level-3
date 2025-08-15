@@ -5,45 +5,299 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>DelayedNotifier</title>
     <style>
-        body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; }
-        .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 24px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
-        label { display:block; margin: 8px 0 4px; font-weight: 600; }
-        input, select, textarea { width: 100%; padding: 8px 10px; border:1px solid #ccc; border-radius:8px; }
-        button { padding: 10px 14px; border:0; border-radius:10px; background:#111827; color:white; cursor:pointer; }
-        table { width:100%; border-collapse: collapse; }
-        th, td { border-bottom:1px solid #eee; padding:8px; text-align:left; }
-        .muted { color:#6b7280; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            padding: 24px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            text-align: center;
+            color: #1f2937;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            letter-spacing: -0.02em;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow:
+                    0 20px 40px rgba(0,0,0,0.08),
+                    0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: slideIn 0.6s ease-out forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+        }
+
+        .card:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow:
+                    0 32px 64px rgba(0,0,0,0.15),
+                    0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #1f2937;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        h2::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 24px;
+            background: #3b82f6;
+            border-radius: 2px;
+        }
+
+        label {
+            display: block;
+            margin: 20px 0 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            font-size: 1rem;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            transform: scale(1.02);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        button {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 16px;
+            background: #3b82f6;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            background: #2563eb;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .delete-btn {
+            background: #ef4444 !important;
+        }
+
+        .delete-btn:hover {
+            background: #dc2626 !important;
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4) !important;
+        }
+
+        .form-row {
+            margin-top: 32px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .query-controls {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+            flex-wrap: wrap;
+        }
+
+        .query-controls input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .query-controls button {
+            padding: 16px 20px;
+            white-space: nowrap;
+        }
+
+        pre {
+            margin-top: 20px;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 16px;
+            overflow: auto;
+            font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 2px solid #e2e8f0;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .hint {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 12px;
+            border-left: 4px solid #3b82f6;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 2rem;
+                margin-bottom: 24px;
+            }
+
+            .card {
+                padding: 24px;
+                border-radius: 20px;
+            }
+
+            .query-controls {
+                flex-direction: column;
+            }
+
+            .query-controls input {
+                min-width: unset;
+            }
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .success {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: #22c55e;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+        }
     </style>
 </head>
 <body>
-<h1>DelayedNotifier</h1>
-<div class="card">
-    <h2>Создать уведомление</h2>
-    <form id="f">
-        <label>Время отправки (UTC, RFC3339)</label>
-        <input id="send_at" placeholder="2025-08-15T12:30:00Z" />
-        <label>Канал</label>
-        <select id="channel">
-            <option value="email">Email</option>
-            <option value="telegram">Telegram</option>
-        </select>
-        <label>Получатель</label>
-        <input id="recipient" placeholder="user@example.com или chat_id" />
-        <label>Сообщение</label>
-        <textarea id="message" rows="4" placeholder="Текст уведомления..."></textarea>
-        <div style="margin-top:12px"><button type="submit">Создать</button></div>
-    </form>
-    <p class="muted">Подсказка: можно указать время в будущем (UTC). Если указать прошедшее — отправится сразу.</p>
-</div>
-
-<div class="card">
-    <h2>Проверить статус / Отменить</h2>
-    <div style="display:flex; gap:8px; align-items:center">
-        <input id="query_id" placeholder="notification id" />
-        <button id="btn_get">GET</button>
-        <button id="btn_del" style="background:#b91c1c">DELETE</button>
+<div class="container">
+    <h1>DelayedNotifier</h1>
+    <div class="card">
+        <h2>Создать уведомление</h2>
+        <form id="f">
+            <label>Время отправки (UTC, RFC3339)</label>
+            <input id="send_at" placeholder="2025-08-15T12:30:00Z" />
+            <label>Канал</label>
+            <select id="channel">
+                <option value="email">📧 Email</option>
+                <option value="telegram">💬 Telegram</option>
+            </select>
+            <label>Получатель</label>
+            <input id="recipient" placeholder="user@example.com или chat_id" />
+            <label>Сообщение</label>
+            <textarea id="message" rows="4" placeholder="Текст уведомления..."></textarea>
+            <div class="form-row">
+                <button type="submit">✨ Создать уведомление</button>
+            </div>
+        </form>
+        <div class="hint">
+            💡 <strong>Подсказка:</strong> Укажите время в будущем (UTC). Если указать прошедшее время — уведомление отправится сразу.
+        </div>
     </div>
-    <pre id="result" style="margin-top:12px; background:#f9fafb; padding:10px; border-radius:8px; overflow:auto"></pre>
+
+    <div class="card">
+        <h2>Проверить статус / Отменить</h2>
+        <div class="query-controls">
+            <input id="query_id" placeholder="🔍 Введите notification id" />
+            <button id="btn_get">📊 Проверить</button>
+            <button id="btn_del" class="delete-btn">🗑️ Отменить</button>
+        </div>
+        <pre id="result"></pre>
+    </div>
 </div>
 
 <script>
@@ -52,29 +306,75 @@
 
     f.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const payload = {
-            send_at: document.getElementById('send_at').value.trim(),
-            channel: document.getElementById('channel').value,
-            recipient: document.getElementById('recipient').value.trim(),
-            message: document.getElementById('message').value,
-        };
-        const res = await fetch('/notify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-        const data = await res.json();
-        result.textContent = JSON.stringify(data, null, 2);
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+
+        submitBtn.textContent = '⏳ Создание...';
+        submitBtn.classList.add('loading');
+
+        try {
+            const payload = {
+                send_at: document.getElementById('send_at').value.trim(),
+                channel: document.getElementById('channel').value,
+                recipient: document.getElementById('recipient').value.trim(),
+                message: document.getElementById('message').value,
+            };
+            const res = await fetch('/notify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+            const data = await res.json();
+            result.textContent = JSON.stringify(data, null, 2);
+            result.className = res.ok ? 'success' : 'error';
+        } catch (error) {
+            result.textContent = 'Ошибка: ' + error.message;
+            result.className = 'error';
+        } finally {
+            submitBtn.textContent = originalText;
+            submitBtn.classList.remove('loading');
+        }
     });
 
     document.getElementById('btn_get').addEventListener('click', async () => {
         const id = document.getElementById('query_id').value.trim();
         if (!id) return;
-        const res = await fetch('/notify/'+id);
-        const data = await res.json();
-        result.textContent = JSON.stringify(data, null, 2);
+
+        const btn = document.getElementById('btn_get');
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Загрузка...';
+        btn.classList.add('loading');
+
+        try {
+            const res = await fetch('/notify/'+id);
+            const data = await res.json();
+            result.textContent = JSON.stringify(data, null, 2);
+            result.className = res.ok ? 'success' : 'error';
+        } catch (error) {
+            result.textContent = 'Ошибка: ' + error.message;
+            result.className = 'error';
+        } finally {
+            btn.textContent = originalText;
+            btn.classList.remove('loading');
+        }
     });
 
     document.getElementById('btn_del').addEventListener('click', async () => {
-        const id = document.getElementById('query_id').value.trim(); if (!id) return;
-        const res = await fetch('/notify/'+id, { method: 'DELETE' });
-        result.textContent = res.status === 204 ? 'Cancelled' : 'Error: '+res.status;
+        const id = document.getElementById('query_id').value.trim();
+        if (!id) return;
+
+        const btn = document.getElementById('btn_del');
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Отмена...';
+        btn.classList.add('loading');
+
+        try {
+            const res = await fetch('/notify/'+id, { method: 'DELETE' });
+            result.textContent = res.status === 204 ? '✅ Успешно отменено' : '❌ Ошибка: '+res.status;
+            result.className = res.status === 204 ? 'success' : 'error';
+        } catch (error) {
+            result.textContent = '❌ Ошибка: ' + error.message;
+            result.className = 'error';
+        } finally {
+            btn.textContent = originalText;
+            btn.classList.remove('loading');
+        }
     });
 </script>
 </body>
