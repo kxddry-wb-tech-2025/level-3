@@ -4,7 +4,6 @@ import (
 	"context"
 	"delayed-notifier/internal/models"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -82,7 +81,7 @@ func (r *RabbitMQ) PublishDelayed(ctx context.Context, n models.Notification) er
 	if n.SendAt.Before(time.Now()) {
 		exp = "0"
 	} else {
-		exp = strconv.FormatInt(n.SendAt.Sub(time.Now()).Milliseconds(), 10)
+		exp = strconv.FormatInt(time.Until(n.SendAt).Milliseconds(), 10)
 	}
 	return r.ch.PublishWithContext(ctx, "", queueDelayed, false, false, amqp.Publishing{
 		ContentType:  "application/json",
@@ -93,7 +92,7 @@ func (r *RabbitMQ) PublishDelayed(ctx context.Context, n models.Notification) er
 			"x-attempt": n.Attempt,
 		},
 		Timestamp: time.Now(),
-		MessageId: fmt.Sprintf("%d", n.ID),
+		MessageId: n.ID,
 		Type:      "notification",
 	})
 }
