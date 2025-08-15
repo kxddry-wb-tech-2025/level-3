@@ -24,6 +24,11 @@ func CreateNotification(ctx context.Context, db Storage) func(*gin.Context) {
 			return
 		}
 
+		if note.ID != 0 {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "id must not be attached"})
+			return
+		}
+
 		id, err := db.Add(ctx, &note)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
