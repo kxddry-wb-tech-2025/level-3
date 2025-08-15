@@ -30,12 +30,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	rmqDsn := cfg.GetString("rabbitmq.dsn")
-	if rmqDsn == "" {
-		log.Fatal().Msg("rabbitmq dsn is empty")
-		os.Exit(1)
-	}
-
 	rmq, err := rabbitmq.New(cfg.GetString("rabbitmq.dsn"))
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to rabbitmq")
