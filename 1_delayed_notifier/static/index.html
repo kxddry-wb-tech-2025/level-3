@@ -269,15 +269,15 @@
     <div class="card">
         <h2>Создать уведомление</h2>
         <form id="f">
-            <label>Время отправки (UTC, RFC3339)</label>
-            <input id="send_at" placeholder="2025-08-15T12:30:00Z" />
+            <label>Время отправки</label>
+            <input type="datetime-local" id="send_at" />
             <label>Канал</label>
             <select id="channel">
-                <option value="email">📧 Email</option>
-                <option value="telegram">💬 Telegram</option>
+                <option value="email" disabled style="color: #9ca3af;">📧 Email (недоступен)</option>
+                <option value="telegram" selected>💬 Telegram</option>
             </select>
             <label>Получатель</label>
-            <input id="recipient" placeholder="user@example.com или chat_id" />
+            <input id="recipient" placeholder="Telegram chat_id (например: 123456789)" />
             <label>Сообщение</label>
             <textarea id="message" rows="4" placeholder="Текст уведомления..."></textarea>
             <div class="form-row">
@@ -285,7 +285,7 @@
             </div>
         </form>
         <div class="hint">
-            💡 <strong>Подсказка:</strong> Укажите время в будущем (UTC). Если указать прошедшее время — уведомление отправится сразу.
+            💡 <strong>Подсказка:</strong> Выберите дату и время в будущем для отложенной отправки. Если не указать время — уведомление отправится сразу.
         </div>
     </div>
 
@@ -313,8 +313,17 @@
         submitBtn.classList.add('loading');
 
         try {
+            const sendAtInput = document.getElementById('send_at');
+            let sendAtValue = sendAtInput.value;
+
+            // Convert datetime-local to RFC3339 format if a value is provided
+            if (sendAtValue) {
+                const date = new Date(sendAtValue);
+                sendAtValue = date.toISOString();
+            }
+
             const payload = {
-                send_at: document.getElementById('send_at').value.trim(),
+                send_at: sendAtValue,
                 channel: document.getElementById('channel').value,
                 recipient: document.getElementById('recipient').value.trim(),
                 message: document.getElementById('message').value,

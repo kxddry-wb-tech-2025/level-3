@@ -39,7 +39,7 @@ func (s *Storage) Cancel(ctx context.Context, id string) error {
 	return s.Set(ctx, models.NotificationStatus{
 		ID:        id,
 		Status:    models.StatusCanceled,
-		UpdatedAt: time.Time{},
+		UpdatedAt: time.Now(),
 	})
 }
 
