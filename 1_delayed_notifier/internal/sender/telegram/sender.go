@@ -18,7 +18,7 @@ type Sender struct {
 	http  *http.Client
 }
 
-func NewTelegramSender(token string, timeout time.Duration) (*Sender, error) {
+func New(token string, timeout time.Duration) (*Sender, error) {
 	if token == "" {
 		return nil, errors.New("telegram token is required")
 	}
@@ -43,6 +43,8 @@ func NewTelegramSender(token string, timeout time.Duration) (*Sender, error) {
 		},
 	}, nil
 }
+
+func (s *Sender) Name() string { return models.ChannelTelegram }
 
 func (s *Sender) Send(ctx context.Context, n *models.Notification) error {
 	url := fmt.Sprintf("%s%s/sendMessage", baseURL, s.token)
