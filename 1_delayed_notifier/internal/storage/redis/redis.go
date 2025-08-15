@@ -27,7 +27,7 @@ func (s *Storage) Set(ctx context.Context, st models.NotificationStatus) error {
 }
 
 func (s *Storage) Get(ctx context.Context, id string) (*models.NotificationStatus, error) {
-	val, err := s.rdb.Get(ctx, s.key(id))
+	val, err := s.rdb.GetWithRetry(ctx, storage.Strategy, s.key(id))
 	if err != nil {
 		return nil, err
 	}
