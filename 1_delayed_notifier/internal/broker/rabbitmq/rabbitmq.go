@@ -87,3 +87,34 @@ func (r *RabbitMQ) PublishDelayed(ctx context.Context, n models.Notification, de
 		Type:      "notification",
 	})
 }
+
+func (r *RabbitMQ) GetReady(ctx context.Context) (<-chan models.Notification, error) {
+	ch, err := r.ch.Consume(queueReady, "", false, false, false, false, nil)
+	if err != nil {
+		return nil, err
+	}
+	out := make(chan models.Notification)
+
+	go func() {
+		defer close(out)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case d, ok := <-ch:
+				if !ok {
+					return
+				}
+				var n models.Notification
+				if err := json.Unmarshal(d.Body, &n); err != nil {
+					_ = d.Nack(false, false) // bad payload
+					continue
+				}
+				out <- n
+				d.Ack(false)
+			}
+		}
+	}()
+
+	return out, nil
+}
