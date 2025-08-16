@@ -17,7 +17,8 @@ rabbitmq:
   queue_name: "delayed_notifications"
 
 telegram:
-  bot_token: "8427335096:AAHlwt_cZ1lGIJWMY3l8Iz68E4Bs-YX_q2s"
+  # Leave empty and set TELEGRAM_BOT_TOKEN env var in production.
+  bot_token: ""
   timeout: 30
 
 logging:
