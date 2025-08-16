@@ -4,7 +4,7 @@ import (
 	"context"
 	"delayed-notifier/internal/httpapi"
 	"delayed-notifier/internal/queue"
-	"delayed-notifier/internal/sender"
+	"delayed-notifier/internal/sender/telegram"
 	"delayed-notifier/internal/storage"
 	"delayed-notifier/internal/worker"
 	"fmt"
@@ -93,7 +93,7 @@ func main() {
 	if token == "" {
 		token = cfg.GetString("telegram.bot_token")
 	}
-	telegram := sender.NewTelegramSender(
+	telegram := telegram.NewSender(
 		token,
 		time.Duration(tgTimeoutSec)*time.Second,
 	)

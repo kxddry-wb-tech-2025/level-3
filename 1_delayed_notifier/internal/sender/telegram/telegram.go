@@ -1,4 +1,4 @@
-package sender
+package telegram
 
 import (
 	"bytes"
@@ -10,17 +10,18 @@ import (
 	"time"
 
 	"delayed-notifier/internal/models"
+	"delayed-notifier/internal/sender"
 )
 
-// TelegramSender sends messages via Telegram Bot API.
-type TelegramSender struct {
+// Sender sends messages via Telegram Bot API.
+type Sender struct {
 	client *http.Client
 	apiURL string
 }
 
-// NewTelegramSender creates a new Telegram sender with the provided bot token and timeout.
-func NewTelegramSender(botToken string, timeout time.Duration) *TelegramSender {
-	return &TelegramSender{
+// NewSender creates a new Telegram sender with the provided bot token and timeout.
+func NewSender(botToken string, timeout time.Duration) *Sender {
+	return &Sender{
 		client: &http.Client{Timeout: timeout},
 		apiURL: fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", botToken),
 	}
@@ -33,9 +34,9 @@ type tgReq struct {
 }
 
 // Send delivers a notification text to the specified chat via Telegram.
-func (t *TelegramSender) Send(ctx context.Context, n *models.Notification) error {
+func (t *Sender) Send(ctx context.Context, n *models.Notification) error {
 	if n.Channel != "telegram" {
-		return ErrUnsupportedChannel
+		return sender.ErrUnsupportedChannel
 	}
 	if n.Recipient == "" {
 		return errors.New("empty recipient")
