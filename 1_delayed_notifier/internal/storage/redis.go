@@ -128,8 +128,6 @@ func (s *RedisStorage) AddToRetry(ctx context.Context, id string, when time.Time
 }
 
 // PopDue pops up to 'limit' ids due at or before 'now' from the given zset key.
-// Note: not strictly atomic w.r.t. concurrent schedulers; acceptable for this task.
-// PopDue pops up to limit ids due at or before now from the given set ("due" or "retry").
 func (s *RedisStorage) PopDue(ctx context.Context, which string, now time.Time, limit int64) ([]string, error) {
 	var zsetKey string
 	switch which {
@@ -160,8 +158,8 @@ func (s *RedisStorage) PopDue(ctx context.Context, which string, now time.Time, 
 	return vals, nil
 }
 
-func anySlice[T any](in []T) []interface{} {
-	out := make([]interface{}, 0, len(in))
+func anySlice[T any](in []T) []any {
+	out := make([]any, 0, len(in))
 	for _, v := range in {
 		out = append(out, v)
 	}
