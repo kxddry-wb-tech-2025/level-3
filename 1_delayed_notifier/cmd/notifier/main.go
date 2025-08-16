@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"delayed-notifier/internal/broker/rabbitmq"
+	"delayed-notifier/internal/handlers"
+	"delayed-notifier/internal/processor"
 	"delayed-notifier/internal/sender/telegram"
 	"delayed-notifier/internal/storage/redis"
 	"net/http"
@@ -56,22 +58,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO: under maintenance
-	_ = bot
-	// w := worker.New(rmq, r, log, bot)
-	// wg := new(sync.WaitGroup)
-	// w.Start(ctx, wg)
+	np := processor.New(rmq, r, bot, log)
+	np.Start(ctx)
 
-	// s := handlers.NewServer(rmq, r)
+	s := handlers.NewServer(rmq, r)
 
 	engine := ginext.New()
 	_ = engine.SetTrustedProxies(nil) // disable warning
 	engine.LoadHTMLFiles("./static/index.html")
 
 	// TODO: maintenance
-	// engine.GET("/notify/:id", s.GetNotification())
-	// engine.POST("/notify", s.PostNotification())
-	// engine.DELETE("/notify/:id", s.DeleteNotification())
+	engine.GET("/notify/:id", s.GetNotification())
+	engine.POST("/notify", s.PostNotification())
+	engine.DELETE("/notify/:id", s.DeleteNotification())
 	engine.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"title": "Main website",
@@ -94,7 +93,5 @@ func main() {
 	}
 
 	rmq.Close()
-	// TODO: maintenance
-	// wg.Wait()
 
 }

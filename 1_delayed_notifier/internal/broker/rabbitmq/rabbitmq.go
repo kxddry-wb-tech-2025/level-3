@@ -141,7 +141,7 @@ func (r *RabbitMQ) Publish(ctx context.Context, n models.Notification) error {
 	return nil
 }
 
-func (r *RabbitMQ) Consume(ctx context.Context, consumerName, queueName string) (chan<- models.QueuePayload, error) {
+func (r *RabbitMQ) Consume(ctx context.Context, consumerName, queueName string) (<-chan models.QueuePayload, error) {
 	msgs, err := r.ch.Consume(
 		queueName, consumerName,
 		false, false, false, false, nil,
