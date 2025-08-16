@@ -4,7 +4,7 @@ import (
 	"context"
 	"delayed-notifier/internal/models"
 	"encoding/json"
-	"strconv"
+	"fmt"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -12,9 +12,8 @@ import (
 )
 
 const (
-	exchangeReady = "delayed_notifier.ready"
-	queueReady    = "delayed_notifier.ready"
-	queueDelayed  = "delayed_notifier.delayed"
+	exchangeDirect  = "delayed_notifier.direct"
+	exchangeDelayed = "delayed_notifier.delayed"
 )
 
 // RabbitMQ implements the Broker interface and can register delayed notifications
@@ -47,25 +46,49 @@ func New(url string, logger *zerolog.Logger) (*RabbitMQ, error) {
 }
 
 func (r *RabbitMQ) setup() error {
-	if err := r.ch.ExchangeDeclare(exchangeReady, "fanout", true, false, false, false, nil); err != nil {
-		return err
+	if err := r.ch.ExchangeDeclare(
+		exchangeDelayed,
+		"x-delayed-message",
+		true, false, false, false,
+		amqp.Table{
+			"x-delayed-type": "direct",
+		},
+	); err != nil {
+		return fmt.Errorf("failed to declare delayed exchange")
 	}
 
-	readyArgs := amqp.Table{"x-queue-type": "classic"}
-	if _, err := r.ch.QueueDeclare(queueReady, true, false, false, false, readyArgs); err != nil {
-		return err
+	if err := r.ch.ExchangeDeclare(
+		exchangeDirect,
+		"direct",
+		true, false, false, false, nil,
+	); err != nil {
+		return fmt.Errorf("failed to declare direct exchange")
 	}
-	if err := r.ch.QueueBind(queueReady, "", exchangeReady, false, nil); err != nil {
-		return err
-	}
-	// Очередь delayed с DLX на ready exchange
-	args := amqp.Table{
-		"x-dead-letter-exchange": exchangeReady,
-		"x-queue-type":           "classic",
-		"x-delayed-type":         "direct",
-	}
-	if _, err := r.ch.QueueDeclare(queueDelayed, true, false, false, false, args); err != nil {
-		return err
+
+	channels := []string{"telegram"} // only telegram is supported for now
+
+	for _, ch := range channels {
+		queueName := fmt.Sprintf("notifications.%s", ch)
+
+		if _, err := r.ch.QueueDeclare(
+			queueName,
+			true, false, false, false, nil,
+		); err != nil {
+			return fmt.Errorf("failed to declare queue %s: %v", queueName, err)
+		}
+
+		if err := r.ch.QueueBind(
+			queueName, ch,
+			exchangeDelayed, false, nil,
+		); err != nil {
+			return fmt.Errorf("failed to bind queue %s to delayed exchange: %v", queueName, err)
+		}
+
+		if err := r.ch.QueueBind(
+			queueName, ch, exchangeDirect, false, nil,
+		); err != nil {
+			return fmt.Errorf("failed to bind queue %s to direct exchange: %v", queueName, err)
+		}
 	}
 	return nil
 }
@@ -80,59 +103,41 @@ func (r *RabbitMQ) Close() {
 	}
 }
 
-// PublishDelayed publishes a models.Notification to a delayed queue
-func (r *RabbitMQ) PublishDelayed(ctx context.Context, n models.Notification) error {
+// Publish publishes a models.Notification to
+// either the delayed queue or the direct queue, based on the expiration factor.
+func (r *RabbitMQ) Publish(ctx context.Context, n models.Notification) error {
 	body, _ := json.Marshal(n)
-	var exp string
+	var (
+		exchange string
+		exp      int64
+		headers  amqp.Table
+	)
 	if n.SendAt.Before(time.Now()) {
-		exp = "0"
+		headers = amqp.Table{}
+		exchange = exchangeDirect
 	} else {
-		exp = strconv.FormatInt(time.Until(n.SendAt).Milliseconds(), 10)
-	}
-	r.log.Debug().Str("notification_id", n.ID).Str("expiration_ms", exp).Msg("Publishing delayed notification to RabbitMQ")
-	return r.ch.PublishWithContext(ctx, "", queueDelayed, false, false, amqp.Publishing{
-		ContentType:  "application/json",
-		Body:         body,
-		DeliveryMode: amqp.Persistent,
-		Expiration:   exp,
-		Headers: amqp.Table{
-			"x-attempt": n.Attempt,
-			"x-delay":   exp,
-		},
-		Timestamp: time.Now(),
-		MessageId: n.ID,
-		Type:      "notification",
-	})
-}
-
-// GetReady returns a channel of ready-to-go notifications.
-func (r *RabbitMQ) GetReady(ctx context.Context) (<-chan models.Notification, error) {
-	ch, err := r.ch.Consume(queueReady, "", false, false, false, false, nil)
-	if err != nil {
-		return nil, err
-	}
-	out := make(chan models.Notification)
-
-	go func() {
-		defer close(out)
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case d, ok := <-ch:
-				if !ok {
-					return
-				}
-				var n models.Notification
-				if err := json.Unmarshal(d.Body, &n); err != nil {
-					_ = d.Nack(false, false) // bad payload
-					continue
-				}
-				out <- n
-				_ = d.Ack(false)
-			}
+		exp = time.Until(n.SendAt).Milliseconds()
+		exchange = exchangeDelayed
+		headers = amqp.Table{
+			"x-delay": exp,
 		}
-	}()
+	}
+	if err := r.ch.Publish(
+		exchange, n.Channel,
+		false, false,
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         body,
+			DeliveryMode: amqp.Persistent,
+			Headers:      headers,
+			Timestamp:    time.Now(),
+			MessageId:    n.ID,
+		},
+	); err != nil {
+		return fmt.Errorf("failed to publish delayed")
+	}
 
-	return out, nil
+	r.log.Debug().Str("notification_id", n.ID).Int64("expiration_ms", exp).Msg("Published notification to exchange " + exchange)
+	return nil
 }
+
