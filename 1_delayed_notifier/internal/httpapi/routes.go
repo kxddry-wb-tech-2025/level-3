@@ -21,6 +21,7 @@ type createReq struct {
 	Message   string     `json:"message"`
 }
 
+// RegisterRoutes registers HTTP endpoints for creating, querying and cancelling notifications.
 func RegisterRoutes(r *ginext.Engine, store *storage.RedisStorage) {
 	r.POST("/notify", func(c *ginext.Context) {
 		var req createReq
