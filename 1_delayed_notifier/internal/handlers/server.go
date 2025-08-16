@@ -7,7 +7,7 @@ import (
 
 // Publisher is an interface that can publish a delayed notification, i.e. to Kafka or RabbitMQ
 type Publisher interface {
-	PublishDelayed(ctx context.Context, n models.Notification) error
+	Publish(ctx context.Context, n models.Notification) error
 }
 
 // StatusStorage is an interface for a storage that can get status quickly
