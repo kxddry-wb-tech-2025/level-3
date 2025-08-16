@@ -140,3 +140,17 @@ func TestSchedulerSkipsCancelled(t *testing.T) {
 		t.Fatalf("expected not to save cancelled notification")
 	}
 }
+
+func TestSchedulerGetNotificationError(t *testing.T) {
+	store := newFakeStore()
+	p := &fakePublisher{}
+	s := NewScheduler(store, p)
+
+	store.popDueResp["due"] = []string{"missing"}
+
+	s.publishDue(context.Background(), time.Now())
+
+	if len(p.bodies) != 0 {
+		t.Fatalf("expected no publish when get fails")
+	}
+}
