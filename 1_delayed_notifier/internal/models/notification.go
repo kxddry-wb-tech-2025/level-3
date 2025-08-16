@@ -4,8 +4,10 @@ import (
 	"time"
 )
 
+// NotificationStatus represents the current processing state of a notification.
 type NotificationStatus string
 
+// Notification status values.
 const (
 	StatusScheduled NotificationStatus = "scheduled"
 	StatusQueued    NotificationStatus = "queued"
@@ -15,6 +17,7 @@ const (
 	StatusCancelled NotificationStatus = "cancelled"
 )
 
+// Notification is a persisted unit of work for delivering a message to a recipient via a channel at a given time.
 type Notification struct {
 	ID            string             `json:"id"`
 	Channel       string             `json:"channel"`

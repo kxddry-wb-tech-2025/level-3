@@ -10,6 +10,7 @@ import (
 	amqp091 "github.com/rabbitmq/amqp091-go"
 )
 
+// RabbitConfig holds connection settings for RabbitMQ.
 type RabbitConfig struct {
 	Host      string
 	Port      int
@@ -18,6 +19,7 @@ type RabbitConfig struct {
 	QueueName string
 }
 
+// Rabbit is a RabbitMQ-backed implementation for publishing and consuming notifications.
 type Rabbit struct {
 	conn      *amqp091.Connection
 	ch        *amqp091.Channel
@@ -34,6 +36,7 @@ func (m amqpDelivery) Body() []byte            { return m.d.Body }
 func (m amqpDelivery) Ack() error              { return m.d.Ack(false) }
 func (m amqpDelivery) Nack(requeue bool) error { return m.d.Nack(false, requeue) }
 
+// NewRabbit initializes a Rabbit connection and declares the queue.
 func NewRabbit(cfg RabbitConfig) (*Rabbit, error) {
 	url := "amqp://" + cfg.Username + ":" + cfg.Password + "@" + cfg.Host + ":" + strconv.Itoa(cfg.Port) + "/"
 	conn, err := amqp091.Dial(url)
@@ -63,6 +66,7 @@ func NewRabbit(cfg RabbitConfig) (*Rabbit, error) {
 	return &Rabbit{conn: conn, ch: ch, queue: q, queueName: cfg.QueueName}, nil
 }
 
+// Publish sends a persistent JSON message to the configured queue.
 func (r *Rabbit) Publish(ctx context.Context, body []byte) error {
 	return r.ch.PublishWithContext(ctx,
 		"",
@@ -78,6 +82,7 @@ func (r *Rabbit) Publish(ctx context.Context, body []byte) error {
 	)
 }
 
+// Consume returns a channel of deliveries that implements models.Delivery.
 func (r *Rabbit) Consume(ctx context.Context) (<-chan models.Delivery, error) {
 	msgs, err := r.ch.Consume(
 		r.queueName,
@@ -110,6 +115,7 @@ func (r *Rabbit) Consume(ctx context.Context) (<-chan models.Delivery, error) {
 	return out, nil
 }
 
+// Close terminates channel and connection.
 func (r *Rabbit) Close() error {
 	if r.ch != nil {
 		r.ch.Close()
