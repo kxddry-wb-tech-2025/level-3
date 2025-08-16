@@ -26,27 +26,24 @@ func main() {
 	log := &zlog.Logger
 
 	cfg := config.New()
-	// Load .env if present to populate process environment
 	_ = gotenv.Load(".env")
 	if err := cfg.Load("./config.yaml"); err != nil {
 		panic(err)
 	}
 
-	// Build server address from host and port
 	host := cfg.GetString("server.host")
 	if host == "" {
-		host = "0.0.0.0" // default: this host
+		host = "0.0.0.0"
 	}
 	portStr := cfg.GetString("server.port")
 	if portStr == "" {
-		portStr = "8080" // default: 8080
+		portStr = "8080"
 	}
 	if _, err := strconv.Atoi(portStr); err != nil {
-		portStr = "8080" // default: 8080
+		portStr = "8080"
 	}
 	addr := fmt.Sprintf("%s:%s", host, portStr)
 
-	// Dependencies: Redis storage, RabbitMQ queue, Telegram sender
 	redisPort := cfg.GetString("redis.port")
 	if redisPort == "" {
 		redisPort = "6379"
@@ -88,7 +85,6 @@ func main() {
 		tgTimeoutStr = "30"
 	}
 	tgTimeoutSec, _ := strconv.Atoi(tgTimeoutStr)
-	// Prefer env var; fallback to config for local setups
 	token := os.Getenv("TELEGRAM_API_TOKEN")
 	if token == "" {
 		token = cfg.GetString("telegram.bot_token")
@@ -98,29 +94,24 @@ func main() {
 		time.Duration(tgTimeoutSec)*time.Second,
 	)
 
-	// Workers
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	scheduler := worker.NewScheduler(redisStore, rmq)
 	consumer := worker.NewConsumer(redisStore, rmq, telegram)
 
-	// Start workers
 	go scheduler.Run(ctx)
 	go consumer.Run(ctx)
 
-	// HTTP server
 	r := ginext.New()
 
 	staticDir := cfg.GetString("server.static_dir")
 	if staticDir != "" {
-		// Serve static UI
 		httpapi.ServeStatic(r, "/", staticDir)
 	}
 
 	httpapi.RegisterRoutes(r, redisStore)
 
-	// HTTP server with graceful shutdown
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: r,
@@ -133,23 +124,19 @@ func main() {
 		}
 	}()
 
-	// Wait for termination signal
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	<-sigCh
 	log.Info().Msg("shutdown signal received, shutting down...")
 
-	// Stop accepting new HTTP requests and wait for in-flight to finish
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Err(err).Msg("http server shutdown error")
 	}
 
-	// Stop background workers
 	cancel()
 
-	// Close external resources
 	if err := rmq.Close(); err != nil {
 		log.Err(err).Msg("failed to close rabbitmq")
 	}

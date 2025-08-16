@@ -68,11 +68,9 @@ func (s *Storage) CreateNotification(ctx context.Context, n *models.Notification
 	if n == nil || n.ID == "" {
 		return storage.ErrInvalidNotification
 	}
-	// Persist object
 	if err := s.SaveNotification(ctx, n); err != nil {
 		return err
 	}
-	// Schedule in due zset
 	return s.client.ZAdd(ctx, keyDueZSet, redis.Z{
 		Score:  float64(n.SendAt.Unix()),
 		Member: n.ID,
@@ -110,7 +108,6 @@ func (s *Storage) CancelNotification(ctx context.Context, id string) error {
 	if err := s.SaveNotification(ctx, n); err != nil {
 		return err
 	}
-	// Remove from scheduling sets
 	pipe := s.client.TxPipeline()
 	pipe.ZRem(ctx, keyDueZSet, id)
 	pipe.ZRem(ctx, keyRetryZSet, id)
@@ -139,7 +136,6 @@ func (s *Storage) PopDue(ctx context.Context, which string, now time.Time, limit
 	default:
 		return nil, storage.ErrUnknownZSet
 	}
-	// Fetch due ids
 	vals, err := s.client.ZRangeByScore(ctx, zsetKey, &redis.ZRangeBy{
 		Min:    "-inf",
 		Max:    fmt.Sprintf("%d", now.Unix()),
@@ -152,7 +148,6 @@ func (s *Storage) PopDue(ctx context.Context, which string, now time.Time, limit
 	if len(vals) == 0 {
 		return nil, nil
 	}
-	// Remove fetched ids
 	if err := s.client.ZRem(ctx, zsetKey, anySlice(vals)...).Err(); err != nil {
 		zlog.Logger.Warn().Err(err).Msg("failed to ZREM due ids; possible duplicates may occur")
 	}

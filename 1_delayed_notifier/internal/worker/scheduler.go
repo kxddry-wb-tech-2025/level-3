@@ -73,7 +73,6 @@ func (s *Scheduler) publishDue(ctx context.Context, now time.Time) {
 		payload, _ := json.Marshal(n)
 		if err := s.q.Publish(ctx, payload); err != nil {
 			zlog.Logger.Error().Err(err).Str("id", id).Msg("scheduler: publish")
-			// re-enqueue shortly to avoid losing it
 			_ = s.store.EnqueueNow(ctx, id)
 		}
 	}

@@ -71,7 +71,7 @@ func (c *Consumer) processDelivery(ctx context.Context, d models.Delivery) {
 		_ = d.Ack()
 		return
 	}
-	// Send via sender with short retry strategy; schedule long retry if still failing
+	// send via sender with short retry strategy; schedule long retry if still failing
 	short := retry.Strategy{Attempts: 3, Delay: 10 * time.Millisecond, Backoff: 2}
 	if err := retry.Do(func() error { return c.sender.Send(ctx, &n) }, short); err != nil {
 		zlog.Logger.Error().Err(err).Str("id", n.ID).Msg("consumer: send failed")

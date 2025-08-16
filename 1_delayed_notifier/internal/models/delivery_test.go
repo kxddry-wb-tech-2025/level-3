@@ -2,7 +2,6 @@ package models
 
 import "testing"
 
-// Compile-time check that external implementations can satisfy the interface.
 type _testDeliveryImpl struct{}
 
 func (_testDeliveryImpl) Body() []byte    { return nil }
