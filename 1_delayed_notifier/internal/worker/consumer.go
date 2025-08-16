@@ -15,26 +15,31 @@ type ConsumerQueue interface {
 	Consume(ctx context.Context) (<-chan models.Delivery, error)
 }
 
+// Sender sends a notification via a channel.
 type Sender interface {
 	Send(ctx context.Context, n *models.Notification) error
 }
 
+// Consumer processes messages from the queue and delivers notifications.
 type Consumer struct {
 	store  storageAccess
 	q      ConsumerQueue
 	sender Sender
 }
 
+// storageAccess is the subset of storage methods used by the consumer.
 type storageAccess interface {
 	GetNotification(ctx context.Context, id string) (*models.Notification, error)
 	SaveNotification(ctx context.Context, n *models.Notification) error
 	AddToRetry(ctx context.Context, id string, when time.Time) error
 }
 
+// NewConsumer constructs a Consumer.
 func NewConsumer(store storageAccess, q ConsumerQueue, s Sender) *Consumer {
 	return &Consumer{store: store, q: q, sender: s}
 }
 
+// Run starts consumption loop until ctx is cancelled.
 func (c *Consumer) Run(ctx context.Context) {
 	msgs, err := c.q.Consume(ctx)
 	if err != nil {
