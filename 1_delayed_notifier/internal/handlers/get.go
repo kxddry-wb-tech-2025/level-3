@@ -26,7 +26,5 @@ func (s *Server) GetNotification() func(c *gin.Context) {
 		}
 
 		c.JSON(http.StatusOK, st)
-		return
-
 	}
 }
