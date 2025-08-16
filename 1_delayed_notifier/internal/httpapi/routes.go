@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"delayed-notifier/internal/models"
-	"delayed-notifier/internal/storage"
+	"delayed-notifier/internal/storage/redis"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -22,7 +22,7 @@ type createReq struct {
 }
 
 // RegisterRoutes registers HTTP endpoints for creating, querying and cancelling notifications.
-func RegisterRoutes(r *ginext.Engine, store *storage.RedisStorage) {
+func RegisterRoutes(r *ginext.Engine, store *redis.Storage) {
 	r.POST("/notify", func(c *ginext.Context) {
 		var req createReq
 		if err := c.BindJSON(&req); err != nil {
