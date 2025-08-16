@@ -50,3 +50,9 @@ type NotificationStatus struct {
 	Error     string    `json:"error,omitempty"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+type QueuePayload struct {
+	Notify  *Notification
+	Commit  func() error
+	Discard func() error
+}
