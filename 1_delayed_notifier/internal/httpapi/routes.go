@@ -33,6 +33,23 @@ func RegisterRoutes(r *ginext.Engine, store *storage.RedisStorage) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "channel, recipient and message are required"})
 			return
 		}
+		// Validate telegram recipient: must be exactly 9 digits
+		if req.Channel == "telegram" {
+			valid := len(req.Recipient) == 9
+			if valid {
+				for i := 0; i < 9; i++ {
+					ch := req.Recipient[i]
+					if ch < '0' || ch > '9' {
+						valid = false
+						break
+					}
+				}
+			}
+			if !valid {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "telegram recipient must be exactly 9 digits"})
+				return
+			}
+		}
 		id := uuid.NewString()
 		now := time.Now().UTC()
 		sendAt := now
