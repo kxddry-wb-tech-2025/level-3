@@ -58,7 +58,7 @@ func (s *Server) PostNotification() func(*gin.Context) {
 			return
 		}
 
-		if err = s.pub.PublishDelayed(c.Copy(), n); err != nil {
+		if err = s.pub.Publish(c.Copy(), n); err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}

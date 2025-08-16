@@ -1,4 +1,4 @@
-package worker
+package processor
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 // Broker can be something like Kafka streams or RabbitMQ. It's used for working with delayed notifications.
 type Broker interface {
 	Publish(ctx context.Context, n models.Notification) error
-	Consume(ctx context.Context, queueName string) (<-chan models.QueuePayload, error)
+	Consume(ctx context.Context, consumername, queueName string) (<-chan models.QueuePayload, error)
 }
 
 // StatusStore is used as an interface to store and get statuses
@@ -60,8 +60,9 @@ func (np *NotificationProcessor) Start(ctx context.Context) {
 
 func (np *NotificationProcessor) consume(ctx context.Context, channel string) error {
 	queueName := fmt.Sprintf("delayed_notifier.%s", channel)
+	consumerName := fmt.Sprintf("consumer-%s", channel)
 
-	msgs, err := np.b.Consume(ctx, queueName)
+	msgs, err := np.b.Consume(ctx, consumerName, queueName)
 	if err != nil {
 		return fmt.Errorf("failed to regiter consumer for %s: %v", channel, err)
 	}
