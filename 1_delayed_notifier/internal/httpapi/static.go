@@ -7,8 +7,9 @@ import (
 )
 
 func ServeStatic(r *ginext.Engine, routePrefix string, dir string) {
-	fileServer := http.FileServer(http.Dir(dir))
-	r.StaticFS(routePrefix, http.Dir(dir))
-	// Ensure index.html is served at root
-	r.GET("/", func(c *ginext.Context) { fileServer.ServeHTTP(c.Writer, c.Request) })
+	// Serve only index.html at root to avoid wildcard conflicts
+	indexPath := dir + "/index.html"
+	r.GET("/", func(c *ginext.Context) {
+		http.ServeFile(c.Writer, c.Request, indexPath)
+	})
 }
