@@ -13,12 +13,14 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// RedisConfig contains connection parameters for Redis.
 type RedisConfig struct {
 	Addr     string
 	Password string
 	DB       int
 }
 
+// RedisStorage persists notifications and schedules using Redis.
 type RedisStorage struct {
 	client *redis.Client
 }
@@ -29,6 +31,7 @@ const (
 	keyRetryZSet       = "notify:retry"
 )
 
+// NewRedisStorage constructs a RedisStorage and pings the server.
 func NewRedisStorage(ctx context.Context, cfg RedisConfig) (*RedisStorage, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     cfg.Addr,
@@ -41,10 +44,12 @@ func NewRedisStorage(ctx context.Context, cfg RedisConfig) (*RedisStorage, error
 	return &RedisStorage{client: client}, nil
 }
 
+// Close shuts down the underlying Redis client.
 func (s *RedisStorage) Close() error {
 	return s.client.Close()
 }
 
+// SaveNotification updates the stored notification object.
 func (s *RedisStorage) SaveNotification(ctx context.Context, n *models.Notification) error {
 	if n == nil || n.ID == "" {
 		return errors.New("invalid notification")
@@ -57,6 +62,7 @@ func (s *RedisStorage) SaveNotification(ctx context.Context, n *models.Notificat
 	return s.client.Set(ctx, key, bytes, 0).Err()
 }
 
+// CreateNotification stores a new notification and schedules it in the due set.
 func (s *RedisStorage) CreateNotification(ctx context.Context, n *models.Notification) error {
 	if n == nil || n.ID == "" {
 		return errors.New("invalid notification")
@@ -72,6 +78,7 @@ func (s *RedisStorage) CreateNotification(ctx context.Context, n *models.Notific
 	}).Err()
 }
 
+// GetNotification returns a notification by id or nil if not found.
 func (s *RedisStorage) GetNotification(ctx context.Context, id string) (*models.Notification, error) {
 	key := fmt.Sprintf(keyNotificationObj, id)
 	val, err := s.client.Get(ctx, key).Bytes()
@@ -88,6 +95,7 @@ func (s *RedisStorage) GetNotification(ctx context.Context, id string) (*models.
 	return &n, nil
 }
 
+// CancelNotification sets status to cancelled and removes it from scheduling sets.
 func (s *RedisStorage) CancelNotification(ctx context.Context, id string) error {
 	n, err := s.GetNotification(ctx, id)
 	if err != nil {
@@ -109,16 +117,19 @@ func (s *RedisStorage) CancelNotification(ctx context.Context, id string) error 
 	return err
 }
 
+// EnqueueNow pushes the id to the due set with score of now.
 func (s *RedisStorage) EnqueueNow(ctx context.Context, id string) error {
 	return s.client.ZAdd(ctx, keyDueZSet, redis.Z{Score: float64(time.Now().Unix()), Member: id}).Err()
 }
 
+// AddToRetry schedules the id for retry at the given time.
 func (s *RedisStorage) AddToRetry(ctx context.Context, id string, when time.Time) error {
 	return s.client.ZAdd(ctx, keyRetryZSet, redis.Z{Score: float64(when.Unix()), Member: id}).Err()
 }
 
 // PopDue pops up to 'limit' ids due at or before 'now' from the given zset key.
 // Note: not strictly atomic w.r.t. concurrent schedulers; acceptable for this task.
+// PopDue pops up to limit ids due at or before now from the given set ("due" or "retry").
 func (s *RedisStorage) PopDue(ctx context.Context, which string, now time.Time, limit int64) ([]string, error) {
 	var zsetKey string
 	switch which {

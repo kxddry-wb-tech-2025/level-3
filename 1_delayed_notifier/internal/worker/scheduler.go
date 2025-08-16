@@ -24,16 +24,18 @@ type Publisher interface {
 	Publish(ctx context.Context, body []byte) error
 }
 
-// Scheduler scans Redis zsets for due notifications and publishes them to RabbitMQ.
+// Scheduler scans NotificationStorage for due notifications and publishes them to Publisher.
 type Scheduler struct {
 	store NotificationStore
 	q     Publisher
 }
 
+// NewScheduler creates a new sheduler
 func NewScheduler(store NotificationStore, q Publisher) *Scheduler {
 	return &Scheduler{store: store, q: q}
 }
 
+// Run runs the Scheduler.
 func (s *Scheduler) Run(ctx context.Context) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -42,9 +44,7 @@ func (s *Scheduler) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case now := <-ticker.C:
-			// process due
 			s.publishDue(ctx, now)
-			// process retry
 			s.publishRetry(ctx, now)
 		}
 	}
