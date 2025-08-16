@@ -112,18 +112,42 @@ func main() {
 
 	httpapi.RegisterRoutes(r, redisStore)
 
-	// Graceful shutdown
+	// HTTP server with graceful shutdown
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: r,
+	}
+
 	go func() {
-		if err := r.Run(addr); err != nil && err != http.ErrServerClosed {
+		log.Info().Msgf("server starting on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Err(err).Msg("failed to start server")
 		}
 	}()
-
-	log.Info().Msgf("server started on %s", addr)
 
 	// Wait for termination signal
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	<-sigCh
-	log.Info().Msg("shutting down...")
+	log.Info().Msg("shutdown signal received, shutting down...")
+
+	// Stop accepting new HTTP requests and wait for in-flight to finish
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Err(err).Msg("http server shutdown error")
+	}
+
+	// Stop background workers
+	cancel()
+
+	// Close external resources
+	if err := rmq.Close(); err != nil {
+		log.Err(err).Msg("failed to close rabbitmq")
+	}
+	if err := redisStore.Close(); err != nil {
+		log.Err(err).Msg("failed to close redis")
+	}
+
+	log.Info().Msg("shutdown complete")
 }
