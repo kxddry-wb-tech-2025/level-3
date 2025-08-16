@@ -18,6 +18,7 @@ import (
 	"github.com/kxddry/wbf/config"
 	"github.com/kxddry/wbf/ginext"
 	"github.com/kxddry/wbf/zlog"
+	"github.com/subosito/gotenv"
 )
 
 func main() {
@@ -25,6 +26,8 @@ func main() {
 	log := &zlog.Logger
 
 	cfg := config.New()
+	// Load .env if present to populate process environment
+	_ = gotenv.Load(".env")
 	if err := cfg.Load("./config.yaml"); err != nil {
 		panic(err)
 	}
@@ -32,14 +35,14 @@ func main() {
 	// Build server address from host and port
 	host := cfg.GetString("server.host")
 	if host == "" {
-		host = "0.0.0.0"
+		host = "0.0.0.0" // default: this host
 	}
 	portStr := cfg.GetString("server.port")
 	if portStr == "" {
-		portStr = "8080"
+		portStr = "8080" // default: 8080
 	}
 	if _, err := strconv.Atoi(portStr); err != nil {
-		portStr = "8080"
+		portStr = "8080" // default: 8080
 	}
 	addr := fmt.Sprintf("%s:%s", host, portStr)
 
@@ -85,8 +88,13 @@ func main() {
 		tgTimeoutStr = "30"
 	}
 	tgTimeoutSec, _ := strconv.Atoi(tgTimeoutStr)
+	// Prefer env var; fallback to config for local setups
+	token := os.Getenv("TELEGRAM_API_TOKEN")
+	if token == "" {
+		token = cfg.GetString("telegram.bot_token")
+	}
 	telegram := sender.NewTelegramSender(
-		cfg.GetString("telegram.bot_token"),
+		token,
 		time.Duration(tgTimeoutSec)*time.Second,
 	)
 
