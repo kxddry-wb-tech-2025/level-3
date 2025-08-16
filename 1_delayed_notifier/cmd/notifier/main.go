@@ -42,6 +42,7 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to connect to redis")
 		os.Exit(1)
 	}
+	_ = r
 
 	timeout := cfg.GetString("telegram.timeout")
 	timeoutDuration, err := time.ParseDuration(timeout)
@@ -93,6 +94,7 @@ func main() {
 	}
 
 	rmq.Close()
-	wg.Wait()
+	// TODO: maintenance
+	// wg.Wait()
 
 }
