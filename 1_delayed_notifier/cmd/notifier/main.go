@@ -5,7 +5,7 @@ import (
 	"delayed-notifier/internal/httpapi"
 	"delayed-notifier/internal/queue"
 	"delayed-notifier/internal/sender/telegram"
-	"delayed-notifier/internal/storage"
+	"delayed-notifier/internal/storage/redis"
 	"delayed-notifier/internal/worker"
 	"fmt"
 	"net/http"
@@ -56,12 +56,12 @@ func main() {
 		redisDBStr = "0"
 	}
 	redisDB, _ := strconv.Atoi(redisDBStr)
-	redisCfg := storage.RedisConfig{
+	redisCfg := redis.Config{
 		Addr:     fmt.Sprintf("%s:%s", cfg.GetString("redis.host"), redisPort),
 		Password: cfg.GetString("redis.password"),
 		DB:       redisDB,
 	}
-	redisStore, err := storage.NewRedisStorage(context.Background(), redisCfg)
+	redisStore, err := redis.NewStorage(context.Background(), redisCfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to init redis storage")
 	}
