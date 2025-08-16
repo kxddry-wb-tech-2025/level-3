@@ -7,6 +7,7 @@ import (
 
 	"delayed-notifier/internal/models"
 
+	"github.com/kxddry/wbf/retry"
 	"github.com/kxddry/wbf/zlog"
 )
 
@@ -70,13 +71,13 @@ func (c *Consumer) processDelivery(ctx context.Context, d models.Delivery) {
 		_ = d.Ack()
 		return
 	}
-	// Send via sender
-	if err := c.sender.Send(ctx, &n); err != nil {
+	// Send via sender with short retry strategy; schedule long retry if still failing
+	short := retry.Strategy{Attempts: 3, Delay: 10 * time.Millisecond, Backoff: 2}
+	if err := retry.Do(func() error { return c.sender.Send(ctx, &n) }, short); err != nil {
 		zlog.Logger.Error().Err(err).Str("id", n.ID).Msg("consumer: send failed")
 		n.Status = models.StatusRetrying
 		n.RetryCount++
-		backoff := computeBackoff(n.RetryCount)
-		next := time.Now().Add(backoff).UTC()
+		next := time.Now().Add(computeBackoff(n.RetryCount)).UTC()
 		n.NextAttemptAt = &next
 		n.LastError = err.Error()
 		n.UpdatedAt = time.Now().UTC()
