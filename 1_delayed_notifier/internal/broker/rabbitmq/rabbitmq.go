@@ -141,3 +141,47 @@ func (r *RabbitMQ) Publish(ctx context.Context, n models.Notification) error {
 	return nil
 }
 
+func (r *RabbitMQ) Consume(ctx context.Context, consumerName, queueName string) (chan<- models.QueuePayload, error) {
+	msgs, err := r.ch.Consume(
+		queueName, consumerName,
+		false, false, false, false, nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to register consumer: %v", err)
+	}
+	out := make(chan models.QueuePayload)
+
+	go func() {
+		defer close(out)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case m, ok := <-msgs:
+				if !ok {
+					return
+				}
+
+				var n models.Notification
+				if err := json.Unmarshal(m.Body, &n); err != nil {
+					continue
+				}
+
+				select {
+				case <-ctx.Done():
+				case out <- models.QueuePayload{
+					Notify: &n,
+					Commit: func() error {
+						return m.Ack(false)
+					},
+					Discard: func() error {
+						return m.Nack(false, false)
+					},
+				}:
+				}
+			}
+		}
+	}()
+
+	return out, nil
+}

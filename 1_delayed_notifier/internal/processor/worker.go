@@ -3,14 +3,15 @@ package worker
 import (
 	"context"
 	"delayed-notifier/internal/models"
+	"fmt"
 
 	"github.com/rs/zerolog"
 )
 
 // Broker can be something like Kafka streams or RabbitMQ. It's used for working with delayed notifications.
 type Broker interface {
-	PublishDelayed(ctx context.Context, n models.Notification) error
-	GetReady(ctx context.Context) (<-chan models.Notification, error)
+	Publish(ctx context.Context, n models.Notification) error
+	Consume(ctx context.Context) (<-chan models.QueuePayload, error)
 }
 
 // StatusStore is used as an interface to store and get statuses
@@ -31,4 +32,32 @@ type NotificationProcessor struct {
 	store StatusStore
 	tg    Sender
 	log   *zerolog.Logger
+}
+
+func New(b Broker, st StatusStore, tg Sender, log *zerolog.Logger) *NotificationProcessor {
+	return &NotificationProcessor{
+		b:     b,
+		store: st,
+		tg:    tg,
+		log:   log,
+	}
+}
+
+func (np *NotificationProcessor) Start(ctx context.Context) {
+	channels := []string{"telegram"} // only telegram is supported for now
+
+	for _, ch := range channels {
+		go func(channel string) {
+			if err := np.consume(ctx, channel); err != nil {
+				np.log.Error().Err(err).Msg("error consuming channel")
+			}
+		}(ch)
+	}
+
+}
+
+func (np *NotificationProcessor) consume(ctx context.Context, channel string) error {
+	queueName := fmt.Sprintf("delayed_notifier.%s", channel)
+
+	msgs, err := np.b.Consume(ctx)
 }
