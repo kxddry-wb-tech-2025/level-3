@@ -110,19 +110,19 @@ func (s *Storage) UniqueClickCount(ctx context.Context, shortCode string) (int64
 }
 
 // ClicksByDay aggregates click counts by day for the given short code and optional time range.
-func (s *Storage) ClicksByDay(ctx context.Context, shortCode string, start, end *time.Time) (map[string]int64, error) {
+func (s *Storage) ClicksByDay(ctx context.Context, shortCode string, start, end time.Time) (map[string]int64, error) {
 	base := `SELECT TO_CHAR(timestamp, 'YYYY-MM-DD') AS day, COUNT(*)
 		FROM clicks WHERE short_code = $1`
 	args := []any{shortCode}
 	idx := 2
-	if start != nil {
+	if !start.IsZero() {
 		base += ` AND timestamp >= $` + itoa(idx)
-		args = append(args, *start)
+		args = append(args, start)
 		idx++
 	}
-	if end != nil {
+	if !end.IsZero() {
 		base += ` AND timestamp <= $` + itoa(idx)
-		args = append(args, *end)
+		args = append(args, end)
 		idx++
 	}
 	base += ` GROUP BY day ORDER BY day`
@@ -146,19 +146,19 @@ func (s *Storage) ClicksByDay(ctx context.Context, shortCode string, start, end 
 }
 
 // ClicksByMonth aggregates click counts by month for the given short code and optional time range.
-func (s *Storage) ClicksByMonth(ctx context.Context, shortCode string, start, end *time.Time) (map[string]int64, error) {
+func (s *Storage) ClicksByMonth(ctx context.Context, shortCode string, start, end time.Time) (map[string]int64, error) {
 	base := `SELECT TO_CHAR(date_trunc('month', timestamp), 'YYYY-MM') AS month, COUNT(*)
 		FROM clicks WHERE short_code = $1`
 	args := []any{shortCode}
 	idx := 2
-	if start != nil {
+	if !start.IsZero() {
 		base += ` AND timestamp >= $` + itoa(idx)
-		args = append(args, *start)
+		args = append(args, start)
 		idx++
 	}
-	if end != nil {
+	if !end.IsZero() {
 		base += ` AND timestamp <= $` + itoa(idx)
-		args = append(args, *end)
+		args = append(args, end)
 		idx++
 	}
 	base += ` GROUP BY month ORDER BY month`
@@ -182,21 +182,21 @@ func (s *Storage) ClicksByMonth(ctx context.Context, shortCode string, start, en
 }
 
 // ClicksByUserAgent aggregates click counts by user agent; limited to top N.
-func (s *Storage) ClicksByUserAgent(ctx context.Context, shortCode string, start, end *time.Time, limit int) (map[string]int64, error) {
+func (s *Storage) ClicksByUserAgent(ctx context.Context, shortCode string, start, end time.Time, limit int) (map[string]int64, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 	base := `SELECT user_agent, COUNT(*) FROM clicks WHERE short_code = $1`
 	args := []any{shortCode}
 	idx := 2
-	if start != nil {
+	if !start.IsZero() {
 		base += ` AND timestamp >= $` + itoa(idx)
-		args = append(args, *start)
+		args = append(args, start)
 		idx++
 	}
-	if end != nil {
+	if !end.IsZero() {
 		base += ` AND timestamp <= $` + itoa(idx)
-		args = append(args, *end)
+		args = append(args, end)
 		idx++
 	}
 	base += ` GROUP BY user_agent ORDER BY COUNT(*) DESC LIMIT $` + itoa(idx)
