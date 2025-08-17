@@ -75,3 +75,45 @@ func TestGetURL_NotFound(t *testing.T) {
 		t.Fatalf("unmet expectations: %v", err)
 	}
 }
+
+func TestSaveURL_WithAlias_Success(t *testing.T) {
+	s, mock, closeFn := newTestStorage(t)
+	defer closeFn()
+
+	insertRe := regexp.MustCompile(`INSERT\s+INTO\s+shortened_urls`)
+	mock.ExpectExec(insertRe.String()).
+		WithArgs("https://example.com", "my-alias", sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	code, err := s.SaveURL(context.Background(), "https://example.com", true, "my-alias")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if code != "my-alias" {
+		t.Fatalf("expected alias 'my-alias', got %q", code)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
+func TestSaveURL_WithAlias_AlreadyExists(t *testing.T) {
+	s, mock, closeFn := newTestStorage(t)
+	defer closeFn()
+
+	insertRe := regexp.MustCompile(`INSERT\s+INTO\s+shortened_urls`)
+	mock.ExpectExec(insertRe.String()).
+		WithArgs("https://example.com", "existing-alias", sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(0, 0)) // 0 rows affected = conflict
+
+	_, err := s.SaveURL(context.Background(), "https://example.com", true, "existing-alias")
+	if err == nil {
+		t.Fatalf("expected error for existing alias, got nil")
+	}
+	if err.Error() != "alias already exists" {
+		t.Fatalf("unexpected error message: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
