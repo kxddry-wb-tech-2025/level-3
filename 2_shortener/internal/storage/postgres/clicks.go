@@ -7,6 +7,8 @@ import (
 	"shortener/internal/domain"
 )
 
+const topLimit = 20
+
 // SaveClick stores a click event for a short code.
 func (s *Storage) SaveClick(ctx context.Context, c domain.Click) error {
 	if c.Timestamp.IsZero() {
@@ -174,7 +176,7 @@ func (s *Storage) ClicksByMonth(ctx context.Context, shortCode string, start, en
 // ClicksByUserAgent aggregates click counts by user agent; limited to top N.
 func (s *Storage) ClicksByUserAgent(ctx context.Context, shortCode string, start, end *time.Time, limit int) (map[string]int64, error) {
 	if limit <= 0 {
-		limit = 10
+		limit = topLimit
 	}
 	base := `SELECT user_agent, COUNT(*) FROM clicks WHERE short_code = $1`
 	args := []any{shortCode}
@@ -240,6 +242,14 @@ func (s *Storage) Analytics(ctx context.Context, shortCode string, from, to *tim
 	if err != nil {
 		return domain.AnalyticsResponse{}, err
 	}
+	referers, err := s.ClicksByReferer(ctx, shortCode, start, end, topLimit)
+	if err != nil {
+		return domain.AnalyticsResponse{}, err
+	}
+	ips, err := s.ClicksByIP(ctx, shortCode, start, end, topLimit)
+	if err != nil {
+		return domain.AnalyticsResponse{}, err
+	}
 
 	return domain.AnalyticsResponse{
 		ShortCode:     shortCode,
@@ -247,10 +257,90 @@ func (s *Storage) Analytics(ctx context.Context, shortCode string, from, to *tim
 		UniqueClicks:  unique,
 		ClicksByDay:   byDay,
 		ClicksByMonth: byMonth,
-		TopUserAgent:  ua,
+		TopUserAgents: ua,
+		TopReferers:   referers,
+		TopIPs:        ips,
 		From:          start,
 		To:            end,
 	}, nil
+}
+
+// ClicksByReferer aggregates click counts by referer. Empty referers are grouped as "(direct)".
+func (s *Storage) ClicksByReferer(ctx context.Context, shortCode string, start, end *time.Time, limit int) (map[string]int64, error) {
+	if limit <= 0 {
+		limit = topLimit
+	}
+	base := `SELECT COALESCE(NULLIF(referer, ''), '(direct)') AS ref, COUNT(*) FROM clicks WHERE short_code = $1`
+	args := []any{shortCode}
+	idx := 2
+	if start != nil && !start.IsZero() {
+		base += ` AND timestamp >= $` + itoa(idx)
+		args = append(args, start)
+		idx++
+	}
+	if end != nil && !end.IsZero() {
+		base += ` AND timestamp <= $` + itoa(idx)
+		args = append(args, end)
+		idx++
+	}
+	base += ` GROUP BY ref ORDER BY COUNT(*) DESC LIMIT $` + itoa(idx)
+	args = append(args, limit)
+
+	r, err := s.db.QueryWithRetry(ctx, Strategy, base, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	res := make(map[string]int64)
+	for r.Next() {
+		var k string
+		var v int64
+		if err := r.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		res[k] = v
+	}
+	return res, r.Err()
+}
+
+// ClicksByIP aggregates click counts by IP address; limited to top N.
+func (s *Storage) ClicksByIP(ctx context.Context, shortCode string, start, end *time.Time, limit int) (map[string]int64, error) {
+	if limit <= 0 {
+		limit = topLimit
+	}
+	base := `SELECT ip::text, COUNT(*) FROM clicks WHERE short_code = $1`
+	args := []any{shortCode}
+	idx := 2
+	if start != nil && !start.IsZero() {
+		base += ` AND timestamp >= $` + itoa(idx)
+		args = append(args, start)
+		idx++
+	}
+	if end != nil && !end.IsZero() {
+		base += ` AND timestamp <= $` + itoa(idx)
+		args = append(args, end)
+		idx++
+	}
+	base += ` GROUP BY ip::text ORDER BY COUNT(*) DESC LIMIT $` + itoa(idx)
+	args = append(args, limit)
+
+	r, err := s.db.QueryWithRetry(ctx, Strategy, base, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	res := make(map[string]int64)
+	for r.Next() {
+		var k string
+		var v int64
+		if err := r.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		res[k] = v
+	}
+	return res, r.Err()
 }
 
 // itoa converts an int to string without importing strconv to keep deps minimal here.
