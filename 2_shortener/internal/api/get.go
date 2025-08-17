@@ -61,7 +61,7 @@ func (s *Server) getAnalytics() func(c *ginext.Context) {
 			}
 		}
 
-		resp, err := s.clickStorage.Analytics(c.Request.Context(), shortCode, from, to, 10)
+		resp, err := s.clickStorage.Analytics(c.Request.Context(), shortCode, &from, &to, 10)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
