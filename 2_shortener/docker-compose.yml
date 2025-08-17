@@ -10,22 +10,26 @@ services:
       POSTGRES_DB: shortener
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-shortener} || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
   migrator:
     image: migrate/migrate:v4.17.1
     container_name: migrator
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - ./migrations:/migrations:ro
-    entrypoint: ["/bin/sh", "-c"]
     command:
-      - |
-        i=0; \
-        until migrate -path=/migrations -database "postgres://postgres:postgres@postgres:5432/shortener?sslmode=disable" up; do \
-          i=$$((i+1)); echo "migrate failed, retry $$i"; sleep 2; \
-        done; \
-        echo "migrations applied"
+      - -path=/migrations
+      - -database
+      - postgres://postgres:postgres@postgres:5432/shortener?sslmode=disable
+      - up
 
 volumes:
   postgres_data:
