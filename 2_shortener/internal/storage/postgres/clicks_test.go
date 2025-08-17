@@ -62,39 +62,57 @@ func TestAnalytics(t *testing.T) {
 	s, mock, done := newClickStorage(t)
 	defer done()
 
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT url FROM shortened_urls WHERE short_code = $1`)).
+		WithArgs("abc123").
+		WillReturnRows(sqlmock.NewRows([]string{"url"}).AddRow("https://example.com"))
+
 	// ClickCount
-	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM clicks WHERE short_code = \$1`).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT COUNT(*) FROM clicks WHERE short_code = $1`)).
 		WithArgs("abc123").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(int64(10)))
 
 	// UniqueClickCount
-	mock.ExpectQuery(`SELECT COUNT\(DISTINCT ip\) FROM clicks WHERE short_code = \$1`).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT COUNT(DISTINCT ip) FROM clicks WHERE short_code = $1`)).
 		WithArgs("abc123").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(int64(5)))
 
 	// ByDay
-	mock.ExpectQuery(`TO_CHAR\(timestamp, 'YYYY-MM-DD'\)`).
+	mock.ExpectQuery(regexp.QuoteMeta(
+		"SELECT TO_CHAR(timestamp, 'YYYY-MM-DD') AS day, COUNT(*) " +
+			"FROM clicks WHERE short_code = $1 GROUP BY day ORDER BY day",
+	)).
 		WithArgs("abc123").
 		WillReturnRows(sqlmock.NewRows([]string{"day", "count"}).AddRow("2025-01-01", int64(1)))
 
 	// ByMonth
-	mock.ExpectQuery(`date_trunc\('month'`).
+	mock.ExpectQuery(regexp.QuoteMeta(
+		"SELECT TO_CHAR(date_trunc('month', timestamp), 'YYYY-MM') AS month, COUNT(*) " +
+			"FROM clicks WHERE short_code = $1 GROUP BY month ORDER BY month",
+	)).
 		WithArgs("abc123").
 		WillReturnRows(sqlmock.NewRows([]string{"month", "count"}).AddRow("2025-01", int64(1)))
 
-	// By UA
-	mock.ExpectQuery(`GROUP BY user_agent`).
-		WithArgs("abc123").
-		WillReturnRows(sqlmock.NewRows([]string{"ua", "count"}).AddRow("ua", int64(1)))
+	// By User-Agent
+	mock.ExpectQuery(regexp.QuoteMeta(
+		"SELECT user_agent, COUNT(*) FROM clicks WHERE short_code = $1 GROUP BY user_agent ORDER BY COUNT(*) DESC LIMIT $2",
+	)).
+		WithArgs("abc123", 10).
+		WillReturnRows(sqlmock.NewRows([]string{"user_agent", "count"}).AddRow("ua", int64(1)))
 
 	// By Referer
-	mock.ExpectQuery(`GROUP BY ref`).
-		WithArgs("abc123").
+	mock.ExpectQuery(regexp.QuoteMeta(
+		"SELECT COALESCE(NULLIF(referer, ''), '(direct)') AS ref, COUNT(*) "+
+			"FROM clicks WHERE short_code = $1 "+
+			"GROUP BY ref ORDER BY COUNT(*) DESC LIMIT $2",
+	)).
+		WithArgs("abc123", 10).
 		WillReturnRows(sqlmock.NewRows([]string{"ref", "count"}).AddRow("(direct)", int64(1)))
 
 	// By IP
-	mock.ExpectQuery(`GROUP BY ip::text`).
-		WithArgs("abc123").
+	mock.ExpectQuery(regexp.QuoteMeta(
+		"SELECT ip::text, COUNT(*) FROM clicks WHERE short_code = $1 GROUP BY ip::text ORDER BY COUNT(*) DESC LIMIT $2",
+	)).
+		WithArgs("abc123", 10).
 		WillReturnRows(sqlmock.NewRows([]string{"ip", "count"}).AddRow("127.0.0.1", int64(1)))
 
 	resp, err := s.Analytics(context.Background(), "abc123", nil, nil, 10)
