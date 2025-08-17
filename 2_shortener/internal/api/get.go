@@ -1,15 +1,18 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"net/http"
+	"shortener/internal/domain"
 	"shortener/internal/storage"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kxddry/wbf/ginext"
 )
 
-func (s *Server) getShorten() func(c *ginext.Context) {
+func (s *Server) getShorten(ctx context.Context) func(c *ginext.Context) {
 	return func(c *ginext.Context) {
 		shortCode := c.Param("short_code")
 		if shortCode == "" {
@@ -26,6 +29,24 @@ func (s *Server) getShorten() func(c *ginext.Context) {
 			return
 		}
 
+		go s.clickStorage.SaveClick(ctx, domain.Click{
+			ShortCode: shortCode,
+			UserAgent: c.GetHeader("User-Agent"),
+			IP:        c.ClientIP(),
+			Referer:   c.GetHeader("Referer"),
+			Timestamp: time.Now(),
+		})
+
 		c.Redirect(http.StatusTemporaryRedirect, url)
+	}
+}
+
+func (s *Server) getAnalytics() func(c *ginext.Context) {
+	return func(c *ginext.Context) {
+		shortCode := c.Param("short_code")
+		if shortCode == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "short code is required"})
+			return
+		}
 	}
 }

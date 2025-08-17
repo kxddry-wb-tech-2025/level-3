@@ -15,14 +15,21 @@ type Click struct {
 	UserAgent string    `json:"user_agent"`
 	IP        string    `json:"ip"`
 	Referer   string    `json:"referer"`
-	Country   string    `json:"country,omitempty"`
-	City      string    `json:"city,omitempty"`
-	Device    string    `json:"device,omitempty"`
-	OS        string    `json:"os,omitempty"`
-	Browser   string    `json:"browser,omitempty"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
 type ShortenRequest struct {
 	URL string `json:"url" validate:"required,url"`
+}
+
+// AnalyticsResponse aggregates analytics for a short code over an optional time range.
+type AnalyticsResponse struct {
+	ShortCode     string           `json:"short_code"`
+	From          *time.Time       `json:"from,omitempty"`
+	To            *time.Time       `json:"to,omitempty"`
+	TotalClicks   int64            `json:"total_clicks"`
+	UniqueClicks  int64            `json:"unique_clicks"`
+	ClicksByDay   map[string]int64 `json:"clicks_by_day,omitempty"`
+	ClicksByMonth map[string]int64 `json:"clicks_by_month,omitempty"`
+	TopUserAgent  map[string]int64 `json:"top_user_agent,omitempty"`
 }
