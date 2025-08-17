@@ -5,31 +5,26 @@ import (
 	"time"
 
 	"shortener/internal/domain"
-
-	"github.com/google/uuid"
 )
 
 // SaveClick stores a click event for a short code.
 func (s *Storage) SaveClick(ctx context.Context, c domain.Click) error {
-	if c.ID == "" {
-		c.ID = uuid.New().String()
-	}
 	if c.Timestamp.IsZero() {
 		c.Timestamp = time.Now().UTC()
 	}
 
 	const insert = `
 		INSERT INTO clicks (
-			id, short_code, user_agent, ip, referer, timestamp
+			short_code, user_agent, ip, referer, timestamp
 		) VALUES (
-			$1, $2, $3, $4, $5, $6
+			$1, $2, $3, $4, $5
 		)`
 
 	_, err := s.db.ExecWithRetry(
 		ctx,
 		Strategy,
 		insert,
-		c.ID, c.ShortCode, c.UserAgent, c.IP, c.Referer, c.Timestamp,
+		c.ShortCode, c.UserAgent, c.IP, c.Referer, c.Timestamp,
 	)
 	return err
 }
