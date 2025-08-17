@@ -17,10 +17,12 @@ const (
 	keyHits = "hits:%s"
 )
 
+// Redis is an implementation of the CacheStorage interface.
 type Redis struct {
 	client *redis.Client
 }
 
+// New creates a new Redis instance.
 func New(ctx context.Context, addr, password string, db int) (*Redis, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
@@ -33,10 +35,12 @@ func New(ctx context.Context, addr, password string, db int) (*Redis, error) {
 	return &Redis{client: client}, nil
 }
 
+// Close closes the Redis client.
 func (r *Redis) Close() error {
 	return r.client.Close()
 }
 
+// GetURL gets the URL from the Redis client.
 func (r *Redis) GetURL(ctx context.Context, shortCode string) (string, error) {
 	keyL := fmt.Sprintf(keyLink, shortCode)
 
@@ -51,6 +55,7 @@ func (r *Redis) GetURL(ctx context.Context, shortCode string) (string, error) {
 	return url, nil
 }
 
+// SetURL sets the URL in the Redis client.
 func (r *Redis) SetURL(ctx context.Context, shortCode, url string, usage int64) error {
 	keyL := fmt.Sprintf(keyLink, shortCode)
 	keyH := fmt.Sprintf(keyHits, shortCode)

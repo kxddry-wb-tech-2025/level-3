@@ -9,11 +9,13 @@ import (
 	"github.com/kxddry/wbf/ginext"
 )
 
+// URLStorage is the interface for the URL storage.
 type URLStorage interface {
 	SaveURL(ctx context.Context, url string, withAlias bool, alias string) (string, error)
 	GetURL(ctx context.Context, shortCode string) (string, error)
 }
 
+// ClickStorage is the interface for the click storage.
 type ClickStorage interface {
 	SaveClick(ctx context.Context, click domain.Click) error
 	GetClicks(ctx context.Context, shortCode string, limit, offset int) ([]domain.Click, error)
@@ -27,11 +29,13 @@ type ClickStorage interface {
 	ClicksByIP(ctx context.Context, shortCode string, start, end *time.Time, limit int) (map[string]int64, error)
 }
 
+// CacheStorage is the interface for the cache storage.
 type CacheStorage interface {
 	GetURL(ctx context.Context, shortCode string) (string, error)
 	SetURL(ctx context.Context, shortCode, url string, usage int64) error
 }
 
+// Server is the server.
 type Server struct {
 	g            *ginext.Engine
 	addrs        []string
@@ -41,6 +45,7 @@ type Server struct {
 	cache        CacheStorage
 }
 
+// New creates a new server.
 func New(urlStorage URLStorage, clickStorage ClickStorage, validator validator.Validator, cache CacheStorage, addrs ...string) *Server {
 	if len(addrs) == 0 {
 		addrs = []string{"0.0.0.0:8080"}
@@ -52,10 +57,12 @@ func New(urlStorage URLStorage, clickStorage ClickStorage, validator validator.V
 	return &Server{g: g, addrs: addrs, urlStorage: urlStorage, clickStorage: clickStorage, validator: validator, cache: cache}
 }
 
+// Run runs the server.
 func (s *Server) Run(ctx context.Context) error {
 	return s.g.Run(s.addrs...)
 }
 
+// RegisterRoutes registers the routes.
 func (s *Server) RegisterRoutes(ctx context.Context) {
 	// API routes
 	s.g.POST("/shorten", s.postShorten(ctx))

@@ -11,6 +11,7 @@ import (
 	"github.com/kxddry/wbf/retry"
 )
 
+// Strategy is the strategy for the database.
 var Strategy = retry.Strategy{
 	Attempts: 3,
 	Delay:    1 * time.Second,
@@ -20,10 +21,12 @@ var Strategy = retry.Strategy{
 // maxGenerateAttempts is the maximum number of attempts to generate a unique short code.
 const maxGenerateAttempts = 10
 
+// Storage is the storage for the URLs.
 type Storage struct {
 	db *dbpg.DB
 }
 
+// New creates a new Storage instance.
 func New(ctx context.Context, master string, slaves []string) (*Storage, error) {
 	db, err := dbpg.New(master, slaves, &dbpg.Options{
 		MaxOpenConns:    10,
@@ -36,6 +39,7 @@ func New(ctx context.Context, master string, slaves []string) (*Storage, error) 
 	return &Storage{db: db}, nil
 }
 
+// Close closes the Storage instance.
 func (s *Storage) Close() error {
 	for _, db := range s.db.Slaves {
 		_ = db.Close()
@@ -44,9 +48,15 @@ func (s *Storage) Close() error {
 }
 
 // SaveURL inserts a new URL with a generated short code.
-// Handles collisions by re-generating codes and retrying with ExecWithRetry.
-// Returns the generated short code or an error if the operation fails.
+// If withAlias is true, the URL is inserted with the given alias.
+// If withAlias is false, the URL is inserted with a generated short code.
+// If the alias already exists, an error is returned.
+// If the short code cannot be generated after maxGenerateAttempts, an error is returned.
 func (s *Storage) SaveURL(ctx context.Context, url string, withAlias bool, alias string) (string, error) {
+	// handle edge cases
+	if alias == "" {
+		withAlias = false
+	}
 	const insertQuery = `
 		INSERT INTO shortened_urls (url, short_code, created_at)
 		VALUES ($1, $2, $3)
@@ -80,7 +90,6 @@ func (s *Storage) SaveURL(ctx context.Context, url string, withAlias bool, alias
 }
 
 // GetURL retrieves the original URL for a given short code.
-// Handles retries and error propagation.
 func (s *Storage) GetURL(ctx context.Context, shortCode string) (string, error) {
 	const query = `
 		SELECT url FROM shortened_urls WHERE short_code = $1

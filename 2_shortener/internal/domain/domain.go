@@ -2,6 +2,7 @@ package domain
 
 import "time"
 
+// ShortenedURL is the struct for the shortened URL.
 type ShortenedURL struct {
 	ID        string    `json:"id"`
 	URL       string    `json:"url"`
@@ -9,6 +10,7 @@ type ShortenedURL struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// Click is the struct for the click.
 type Click struct {
 	ID        string    `json:"id"`
 	ShortCode string    `json:"short_code"`
@@ -18,12 +20,13 @@ type Click struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// ShortenRequest is the struct for the shorten request.
 type ShortenRequest struct {
 	URL   string `json:"url" validate:"required,url"`
 	Alias string `json:"alias,omitempty"`
 }
 
-// AnalyticsResponse aggregates analytics for a short code over an optional time range.
+// AnalyticsResponse is the struct for the analytics response.
 type AnalyticsResponse struct {
 	ShortCode     string           `json:"short_code"`
 	From          *time.Time       `json:"from,omitempty"`
