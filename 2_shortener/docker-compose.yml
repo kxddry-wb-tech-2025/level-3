@@ -11,7 +11,21 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-
+  migrator:
+    image: migrate/migrate:v4.17.1
+    container_name: migrator
+    depends_on:
+      - postgres
+    volumes:
+      - ./migrations:/migrations:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        i=0; \
+        until migrate -path=/migrations -database "postgres://postgres:postgres@postgres:5432/shortener?sslmode=disable" up; do \
+          i=$$((i+1)); echo "migrate failed, retry $$i"; sleep 2; \
+        done; \
+        echo "migrations applied"
 
 volumes:
   postgres_data:
