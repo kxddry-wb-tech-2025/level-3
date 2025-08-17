@@ -22,6 +22,7 @@ type ClickStorage interface {
 	ClicksByDay(ctx context.Context, shortCode string, start, end time.Time) (map[string]int64, error)
 	ClicksByMonth(ctx context.Context, shortCode string, start, end time.Time) (map[string]int64, error)
 	ClicksByUserAgent(ctx context.Context, shortCode string, start, end time.Time, limit int) (map[string]int64, error)
+	Analytics(ctx context.Context, shortCode string, from, to *time.Time, topLimit int) (domain.AnalyticsResponse, error)
 }
 
 type Server struct {
@@ -45,7 +46,8 @@ func (s *Server) Run(ctx context.Context) error {
 	return s.g.Run(s.addrs...)
 }
 
-func (s *Server) RegisterRoutes(r *ginext.Engine) {
-	r.POST("/shorten", s.postShorten())
-	r.GET("/s/:short_code", s.getShorten())
+func (s *Server) RegisterRoutes(ctx context.Context) {
+	s.g.POST("/shorten", s.postShorten())
+	s.g.GET("/s/:short_code", s.getShorten(ctx))
+	s.g.GET("/analytics/:short_code", s.getAnalytics())
 }

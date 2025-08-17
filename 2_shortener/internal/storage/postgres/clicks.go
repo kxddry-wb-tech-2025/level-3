@@ -20,19 +20,16 @@ func (s *Storage) SaveClick(ctx context.Context, c domain.Click) error {
 
 	const insert = `
 		INSERT INTO clicks (
-			id, short_code, user_agent, ip, referer,
-			country, city, device, os, browser, timestamp
+			id, short_code, user_agent, ip, referer, timestamp
 		) VALUES (
-			$1, $2, $3, $4, $5,
-			$6, $7, $8, $9, $10, $11
+			$1, $2, $3, $4, $5, $6
 		)`
 
 	_, err := s.db.ExecWithRetry(
 		ctx,
 		Strategy,
 		insert,
-		c.ID, c.ShortCode, c.UserAgent, c.IP, c.Referer,
-		c.Country, c.City, c.Device, c.OS, c.Browser, c.Timestamp,
+		c.ID, c.ShortCode, c.UserAgent, c.IP, c.Referer, c.Timestamp,
 	)
 	return err
 }
@@ -47,8 +44,7 @@ func (s *Storage) GetClicks(ctx context.Context, shortCode string, limit, offset
 	}
 
 	const q = `
-		SELECT id, short_code, user_agent, ip, referer,
-		       country, city, device, os, browser, timestamp
+		SELECT id, short_code, user_agent, ip, referer, timestamp
 		FROM clicks
 		WHERE short_code = $1
 		ORDER BY timestamp DESC
@@ -64,8 +60,7 @@ func (s *Storage) GetClicks(ctx context.Context, shortCode string, limit, offset
 	var out []domain.Click
 	for rows.Next() {
 		var c domain.Click
-		if err := rows.Scan(&c.ID, &c.ShortCode, &c.UserAgent, &c.IP, &c.Referer,
-			&c.Country, &c.City, &c.Device, &c.OS, &c.Browser, &c.Timestamp); err != nil {
+		if err := rows.Scan(&c.ID, &c.ShortCode, &c.UserAgent, &c.IP, &c.Referer, &c.Timestamp); err != nil {
 			return nil, err
 		}
 		out = append(out, c)
@@ -218,6 +213,54 @@ func (s *Storage) ClicksByUserAgent(ctx context.Context, shortCode string, start
 		res[k] = v
 	}
 	return res, r.Err()
+}
+
+// Analytics builds a composite analytics response for a short code and optional time range.
+func (s *Storage) Analytics(ctx context.Context, shortCode string, from, to *time.Time, topLimit int) (domain.AnalyticsResponse, error) {
+	var start, end time.Time
+	if from != nil {
+		start = *from
+	}
+	if to != nil {
+		end = *to
+	}
+
+	total, err := s.ClickCount(ctx, shortCode)
+	if err != nil {
+		return domain.AnalyticsResponse{}, err
+	}
+	unique, err := s.UniqueClickCount(ctx, shortCode)
+	if err != nil {
+		return domain.AnalyticsResponse{}, err
+	}
+	byDay, err := s.ClicksByDay(ctx, shortCode, start, end)
+	if err != nil {
+		return domain.AnalyticsResponse{}, err
+	}
+	byMonth, err := s.ClicksByMonth(ctx, shortCode, start, end)
+	if err != nil {
+		return domain.AnalyticsResponse{}, err
+	}
+	ua, err := s.ClicksByUserAgent(ctx, shortCode, start, end, topLimit)
+	if err != nil {
+		return domain.AnalyticsResponse{}, err
+	}
+
+	resp := domain.AnalyticsResponse{
+		ShortCode:     shortCode,
+		TotalClicks:   total,
+		UniqueClicks:  unique,
+		ClicksByDay:   byDay,
+		ClicksByMonth: byMonth,
+		TopUserAgent:  ua,
+	}
+	if from != nil {
+		resp.From = from
+	}
+	if to != nil {
+		resp.To = to
+	}
+	return resp, nil
 }
 
 // itoa converts an int to string without importing strconv to keep deps minimal here.
