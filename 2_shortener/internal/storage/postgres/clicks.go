@@ -216,13 +216,13 @@ func (s *Storage) ClicksByUserAgent(ctx context.Context, shortCode string, start
 }
 
 // Analytics builds a composite analytics response for a short code and optional time range.
-func (s *Storage) Analytics(ctx context.Context, shortCode string, from, to *time.Time, topLimit int) (domain.AnalyticsResponse, error) {
+func (s *Storage) Analytics(ctx context.Context, shortCode string, from, to time.Time, topLimit int) (domain.AnalyticsResponse, error) {
 	var start, end time.Time
-	if from != nil {
-		start = *from
+	if !from.IsZero() {
+		start = from
 	}
-	if to != nil {
-		end = *to
+	if !to.IsZero() {
+		end = to
 	}
 
 	total, err := s.ClickCount(ctx, shortCode)
@@ -246,21 +246,16 @@ func (s *Storage) Analytics(ctx context.Context, shortCode string, from, to *tim
 		return domain.AnalyticsResponse{}, err
 	}
 
-	resp := domain.AnalyticsResponse{
+	return domain.AnalyticsResponse{
 		ShortCode:     shortCode,
 		TotalClicks:   total,
 		UniqueClicks:  unique,
 		ClicksByDay:   byDay,
 		ClicksByMonth: byMonth,
 		TopUserAgent:  ua,
-	}
-	if from != nil {
-		resp.From = from
-	}
-	if to != nil {
-		resp.To = to
-	}
-	return resp, nil
+		From:          from,
+		To:            to,
+	}, nil
 }
 
 // itoa converts an int to string without importing strconv to keep deps minimal here.
