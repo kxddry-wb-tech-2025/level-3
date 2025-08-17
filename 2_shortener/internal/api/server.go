@@ -10,7 +10,7 @@ import (
 )
 
 type URLStorage interface {
-	SaveURL(ctx context.Context, url string) (string, error)
+	SaveURL(ctx context.Context, url string, withAlias bool, alias string) (string, error)
 	GetURL(ctx context.Context, shortCode string) (string, error)
 }
 

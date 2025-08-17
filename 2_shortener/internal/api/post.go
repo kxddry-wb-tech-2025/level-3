@@ -2,11 +2,14 @@ package api
 
 import (
 	"net/http"
+	"regexp"
 	"shortener/internal/domain"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kxddry/wbf/ginext"
 )
+
+var aliasRe = regexp.MustCompile(`^[a-zA-Z0-9_-]{3,32}$`)
 
 func (s *Server) postShorten() func(c *ginext.Context) {
 	return func(c *ginext.Context) {
@@ -19,7 +22,7 @@ func (s *Server) postShorten() func(c *ginext.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		shortCode, err := s.urlStorage.SaveURL(c.Request.Context(), req.URL)
+		shortCode, err := s.urlStorage.SaveURL(c.Request.Context(), req.URL, true, req.Alias)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

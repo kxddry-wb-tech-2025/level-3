@@ -19,7 +19,8 @@ type Click struct {
 }
 
 type ShortenRequest struct {
-	URL string `json:"url" validate:"required,url"`
+	URL   string `json:"url" validate:"required,url"`
+	Alias string `json:"alias,omitempty"`
 }
 
 // AnalyticsResponse aggregates analytics for a short code over an optional time range.

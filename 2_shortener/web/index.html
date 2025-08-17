@@ -27,6 +27,10 @@
         <h2>Create Short Link</h2>
         <label for="url">Original URL</label>
         <input id="url" type="url" placeholder="https://example.com" />
+
+        <label for="alias">Custom Alias (optional)</label>
+        <input id="alias" type="text" placeholder="letters, numbers, _ or - (3-32)" />
+
         <button id="createBtn">Create</button>
         <div id="createResult" class="muted"></div>
       </div>
@@ -36,7 +40,7 @@
       <div class="card">
         <h2>Analytics</h2>
         <label for="code">Short Code</label>
-        <input id="code" type="text" placeholder="e.g. abc123" />
+        <input id="code" type="text" placeholder="e.g. abc123 or your alias" />
 
         <label for="from">From (YYYY-MM-DD)</label>
         <input id="from" type="date" />
@@ -55,13 +59,16 @@
 
     $('createBtn').addEventListener('click', async () => {
       const url = $('url').value.trim();
+      const alias = $('alias').value.trim();
       $('createResult').textContent = '';
       if (!url) { $('createResult').textContent = 'Please enter a URL'; return; }
       try {
+        const body = { url };
+        if (alias) body.alias = alias;
         const res = await fetch('/shorten', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url })
+          body: JSON.stringify(body)
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Request failed');
@@ -73,7 +80,7 @@
 
     $('analyticsBtn').addEventListener('click', async () => {
       const code = $('code').value.trim();
-      const from = $('from').value.trim(); // browser returns YYYY-MM-DD for type=date
+      const from = $('from').value.trim();
       const to = $('to').value.trim();
       const params = new URLSearchParams();
       if (from) params.set('from', from);
