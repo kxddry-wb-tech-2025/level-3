@@ -23,3 +23,6 @@ type Click struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+type ShortenRequest struct {
+	URL string `json:"url"`
+}
