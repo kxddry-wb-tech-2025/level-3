@@ -23,6 +23,8 @@ type ClickStorage interface {
 	ClicksByMonth(ctx context.Context, shortCode string, start, end *time.Time) (map[string]int64, error)
 	ClicksByUserAgent(ctx context.Context, shortCode string, start, end *time.Time, limit int) (map[string]int64, error)
 	Analytics(ctx context.Context, shortCode string, from, to *time.Time, topLimit int) (domain.AnalyticsResponse, error)
+	ClicksByReferer(ctx context.Context, shortCode string, start, end *time.Time, limit int) (map[string]int64, error)
+	ClicksByIP(ctx context.Context, shortCode string, start, end *time.Time, limit int) (map[string]int64, error)
 }
 
 type Server struct {

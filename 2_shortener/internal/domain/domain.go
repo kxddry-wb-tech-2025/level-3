@@ -31,5 +31,7 @@ type AnalyticsResponse struct {
 	UniqueClicks  int64            `json:"unique_clicks"`
 	ClicksByDay   map[string]int64 `json:"clicks_by_day,omitempty"`
 	ClicksByMonth map[string]int64 `json:"clicks_by_month,omitempty"`
-	TopUserAgent  map[string]int64 `json:"top_user_agent,omitempty"`
+	TopUserAgents map[string]int64 `json:"top_user_agents,omitempty"`
+	TopReferers   map[string]int64 `json:"top_referers,omitempty"`
+	TopIPs        map[string]int64 `json:"top_ips,omitempty"`
 }
