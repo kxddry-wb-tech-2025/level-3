@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"shortener/internal/domain"
 	"shortener/internal/storage"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -49,38 +48,24 @@ func (s *Server) getAnalytics() func(c *ginext.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "short code is required"})
 			return
 		}
-		from := c.Query("from")
-		to := c.Query("to")
-		topLimit := c.Query("top_limit")
-		if from == "" {
-			from = time.Now().AddDate(0, -1, 0).Format(time.DateOnly)
+
+		var from, to time.Time
+		if v := c.Query("from"); v != "" {
+			if t, err := time.Parse(time.RFC3339, v); err == nil {
+				from = t
+			}
 		}
-		if to == "" {
-			to = time.Now().Format(time.DateOnly)
+		if v := c.Query("to"); v != "" {
+			if t, err := time.Parse(time.RFC3339, v); err == nil {
+				to = t
+			}
 		}
-		if topLimit == "" {
-			topLimit = "100"
-		}
-		fromTime, err := time.Parse(time.DateOnly, from)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid from date"})
-			return
-		}
-		toTime, err := time.Parse(time.DateOnly, to)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid to date"})
-			return
-		}
-		topLimitInt, err := strconv.Atoi(topLimit)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid top limit"})
-			return
-		}
-		analytics, err := s.clickStorage.Analytics(c.Request.Context(), shortCode, fromTime, toTime, topLimitInt)
+
+		resp, err := s.clickStorage.Analytics(c.Request.Context(), shortCode, from, to, 10)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, analytics)
+		c.JSON(http.StatusOK, resp)
 	}
 }
