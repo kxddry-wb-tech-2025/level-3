@@ -110,12 +110,12 @@ func (s *Storage) ClicksByDay(ctx context.Context, shortCode string, start, end 
 		FROM clicks WHERE short_code = $1`
 	args := []any{shortCode}
 	idx := 2
-	if start != nil {
+	if start != nil && !start.IsZero() {
 		base += ` AND timestamp >= $` + itoa(idx)
 		args = append(args, start)
 		idx++
 	}
-	if end != nil {
+	if end != nil && !end.IsZero() {
 		base += ` AND timestamp <= $` + itoa(idx)
 		args = append(args, end)
 		idx++
@@ -146,12 +146,12 @@ func (s *Storage) ClicksByMonth(ctx context.Context, shortCode string, start, en
 		FROM clicks WHERE short_code = $1`
 	args := []any{shortCode}
 	idx := 2
-	if start != nil {
+	if start != nil && !start.IsZero() {
 		base += ` AND timestamp >= $` + itoa(idx)
 		args = append(args, start)
 		idx++
 	}
-	if end != nil {
+	if end != nil && !end.IsZero() {
 		base += ` AND timestamp <= $` + itoa(idx)
 		args = append(args, end)
 		idx++
@@ -184,12 +184,12 @@ func (s *Storage) ClicksByUserAgent(ctx context.Context, shortCode string, start
 	base := `SELECT user_agent, COUNT(*) FROM clicks WHERE short_code = $1`
 	args := []any{shortCode}
 	idx := 2
-	if start != nil {
+	if start != nil && !start.IsZero() {
 		base += ` AND timestamp >= $` + itoa(idx)
 		args = append(args, start)
 		idx++
 	}
-	if end != nil {
+	if end != nil && !end.IsZero() {
 		base += ` AND timestamp <= $` + itoa(idx)
 		args = append(args, end)
 		idx++
@@ -218,10 +218,10 @@ func (s *Storage) ClicksByUserAgent(ctx context.Context, shortCode string, start
 // Analytics builds a composite analytics response for a short code and optional time range.
 func (s *Storage) Analytics(ctx context.Context, shortCode string, from, to *time.Time, topLimit int) (domain.AnalyticsResponse, error) {
 	var start, end *time.Time
-	if from != nil {
+	if from != nil && !from.IsZero() {
 		start = from
 	}
-	if to != nil {
+	if to != nil && !to.IsZero() {
 		end = to
 	}
 
@@ -253,8 +253,8 @@ func (s *Storage) Analytics(ctx context.Context, shortCode string, from, to *tim
 		ClicksByDay:   byDay,
 		ClicksByMonth: byMonth,
 		TopUserAgent:  ua,
-		From:          from,
-		To:            to,
+		From:          start,
+		To:            end,
 	}, nil
 }
 

@@ -38,11 +38,11 @@
         <label for="code">Short Code</label>
         <input id="code" type="text" placeholder="e.g. abc123" />
 
-        <label for="from">From (RFC3339)</label>
-        <input id="from" type="text" placeholder="2025-01-01T00:00:00Z" />
+        <label for="from">From (YYYY-MM-DD)</label>
+        <input id="from" type="date" />
 
-        <label for="to">To (RFC3339)</label>
-        <input id="to" type="text" placeholder="2025-12-31T23:59:59Z" />
+        <label for="to">To (YYYY-MM-DD)</label>
+        <input id="to" type="date" />
 
         <button id="analyticsBtn">Fetch Analytics</button>
         <pre id="analyticsOut"></pre>
@@ -73,7 +73,7 @@
 
     $('analyticsBtn').addEventListener('click', async () => {
       const code = $('code').value.trim();
-      const from = $('from').value.trim();
+      const from = $('from').value.trim(); // browser returns YYYY-MM-DD for type=date
       const to = $('to').value.trim();
       const params = new URLSearchParams();
       if (from) params.set('from', from);

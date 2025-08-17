@@ -51,14 +51,20 @@ func (s *Server) getAnalytics() func(c *ginext.Context) {
 
 		var from, to time.Time
 		if v := c.Query("from"); v != "" {
-			if t, err := time.Parse(time.RFC3339, v); err == nil {
-				from = t
+			parsed, err := time.Parse(time.DateOnly, v)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid 'from' date; expected YYYY-MM-DD"})
+				return
 			}
+			from = parsed
 		}
 		if v := c.Query("to"); v != "" {
-			if t, err := time.Parse(time.RFC3339, v); err == nil {
-				to = t
+			parsed, err := time.Parse(time.DateOnly, v)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid 'to' date; expected YYYY-MM-DD"})
+				return
 			}
+			to = parsed
 		}
 
 		resp, err := s.clickStorage.Analytics(c.Request.Context(), shortCode, &from, &to, 10)
