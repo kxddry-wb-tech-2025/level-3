@@ -22,7 +22,11 @@ func (s *Server) postShorten() func(c *ginext.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		shortCode, err := s.urlStorage.SaveURL(c.Request.Context(), req.URL, true, req.Alias)
+		if req.Alias != "" && !aliasRe.MatchString(req.Alias) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alias"})
+			return
+		}
+		shortCode, err := s.urlStorage.SaveURL(c.Request.Context(), req.URL, req.Alias != "", req.Alias)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
