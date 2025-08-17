@@ -15,7 +15,7 @@ func (s *Server) postShorten() func(c *ginext.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		if err := s.validator.URL(req.URL); err != nil {
+		if err := s.validator.Struct(req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
