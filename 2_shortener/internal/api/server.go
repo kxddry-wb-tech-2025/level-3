@@ -47,7 +47,12 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 func (s *Server) RegisterRoutes(ctx context.Context) {
+	// API routes
 	s.g.POST("/shorten", s.postShorten())
 	s.g.GET("/s/:short_code", s.getShorten(ctx))
 	s.g.GET("/analytics/:short_code", s.getAnalytics())
+
+	// Static UI routes
+	s.g.Static("/ui", "./web")
+	s.g.StaticFile("/", "./web/index.html")
 }

@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
+	"shortener/internal/api"
 	"shortener/internal/storage/postgres"
+	"shortener/internal/validator"
 
 	"github.com/kxddry/wbf/config"
-	"github.com/kxddry/wbf/ginext"
 	"github.com/kxddry/wbf/zlog"
 )
 
@@ -18,13 +19,18 @@ func main() {
 	cfg := config.New()
 	cfg.Load("./config.yaml")
 
-	storage, err := postgres.New(ctx, cfg.GetString("postgres.master"), nil)
+	store, err := postgres.New(ctx, cfg.GetString("postgres.master"), nil)
 	if err != nil {
 		zlog.Logger.Fatal().Err(err).Msg("failed to connect to database")
 	}
-	defer storage.Close()
+	defer store.Close()
 
-	g := ginext.New()
-	_ = g
+	v := validator.New()
+	srv := api.New(store, store, *v)
+	// Register routes (with ctx for async click logging)
+	srv.RegisterRoutes(ctx)
 
+	if err := srv.Run(ctx); err != nil {
+		zlog.Logger.Fatal().Err(err).Msg("server exited with error")
+	}
 }
