@@ -5,6 +5,7 @@ import (
 	"shortener/internal/storage/postgres"
 
 	"github.com/kxddry/wbf/config"
+	"github.com/kxddry/wbf/ginext"
 	"github.com/kxddry/wbf/zlog"
 )
 
@@ -17,9 +18,13 @@ func main() {
 	cfg := config.New()
 	cfg.Load("./config.yaml")
 
-	storage, err := postgres.New(cfg.GetString("postgres.master"), nil)
+	storage, err := postgres.New(ctx, cfg.GetString("postgres.master"), nil)
 	if err != nil {
 		zlog.Logger.Fatal().Err(err).Msg("failed to connect to database")
 	}
 	defer storage.Close()
+
+	g := ginext.New()
+	_ = g
+
 }

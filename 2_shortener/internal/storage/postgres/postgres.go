@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"shortener/internal/domain"
 	"shortener/internal/storage"
 	"time"
 
@@ -53,7 +54,7 @@ func (s *Storage) Close() error {
 
 func (s *Storage) updateSlavesURLs(ctx context.Context) error {
 	query := `
-		SELECT url, short_code, created_at 
+		SELECT id, url, short_code, created_at 
 		FROM shortened_urls 
 		WHERE created_at > NOW() - INTERVAL '1 hour'
 		ORDER BY created_at DESC
@@ -65,17 +66,10 @@ func (s *Storage) updateSlavesURLs(ctx context.Context) error {
 	}
 	defer rows.Close()
 
-	// Collect all URLs to replicate
-	type urlRecord struct {
-		url       string
-		shortCode string
-		createdAt time.Time
-	}
-
-	var records []urlRecord
+	var records []domain.ShortenedURL
 	for rows.Next() {
-		var record urlRecord
-		if err := rows.Scan(&record.url, &record.shortCode, &record.createdAt); err != nil {
+		var record domain.ShortenedURL
+		if err := rows.Scan(&record.ID, &record.URL, &record.ShortCode, &record.CreatedAt); err != nil {
 			return err
 		}
 		records = append(records, record)
@@ -89,16 +83,16 @@ func (s *Storage) updateSlavesURLs(ctx context.Context) error {
 	for i, slave := range s.db.Slaves {
 		for _, record := range records {
 			insertQuery := `
-				INSERT INTO shortened_urls (url, short_code, created_at)
-				VALUES ($1, $2, $3)
+				INSERT INTO shortened_urls (id, url, short_code, created_at)
+				VALUES ($1, $2, $3, $4)
 				ON CONFLICT (short_code) DO NOTHING
 			`
-			_, err := slave.ExecContext(ctx, insertQuery, record.url, record.shortCode, record.createdAt)
+			_, err := slave.ExecContext(ctx, insertQuery, record.ID, record.URL, record.ShortCode, record.CreatedAt)
 			if err != nil {
 				zlog.Logger.Error().
 					Err(err).
 					Int("slave_index", i).
-					Str("short_code", record.shortCode).
+					Str("short_code", record.ShortCode).
 					Msg("failed to replicate URL to slave")
 				continue
 			}
