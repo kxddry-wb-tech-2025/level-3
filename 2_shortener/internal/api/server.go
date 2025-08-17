@@ -19,10 +19,10 @@ type ClickStorage interface {
 	GetClicks(ctx context.Context, shortCode string, limit, offset int) ([]domain.Click, error)
 	ClickCount(ctx context.Context, shortCode string) (int64, error)
 	UniqueClickCount(ctx context.Context, shortCode string) (int64, error)
-	ClicksByDay(ctx context.Context, shortCode string, start, end time.Time) (map[string]int64, error)
-	ClicksByMonth(ctx context.Context, shortCode string, start, end time.Time) (map[string]int64, error)
-	ClicksByUserAgent(ctx context.Context, shortCode string, start, end time.Time, limit int) (map[string]int64, error)
-	Analytics(ctx context.Context, shortCode string, from, to time.Time, topLimit int) (domain.AnalyticsResponse, error)
+	ClicksByDay(ctx context.Context, shortCode string, start, end *time.Time) (map[string]int64, error)
+	ClicksByMonth(ctx context.Context, shortCode string, start, end *time.Time) (map[string]int64, error)
+	ClicksByUserAgent(ctx context.Context, shortCode string, start, end *time.Time, limit int) (map[string]int64, error)
+	Analytics(ctx context.Context, shortCode string, from, to *time.Time, topLimit int) (domain.AnalyticsResponse, error)
 }
 
 type Server struct {
