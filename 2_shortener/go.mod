@@ -8,10 +8,10 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/kxddry/wbf v1.0.0
 	github.com/subosito/gotenv v1.6.0
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 )
 
 require (
-	github.com/DATA-DOG/go-sqlmock v1.5.0 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
