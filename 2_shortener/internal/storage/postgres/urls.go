@@ -17,6 +17,9 @@ var Strategy = retry.Strategy{
 	Backoff:  2,
 }
 
+// maxGenerateAttempts is the maximum number of attempts to generate a unique short code.
+const maxGenerateAttempts = 10
+
 type Storage struct {
 	db *dbpg.DB
 }
@@ -50,7 +53,7 @@ func (s *Storage) SaveURL(ctx context.Context, url string) (string, error) {
 		ON CONFLICT (short_code) DO NOTHING
 	`
 
-	const maxGenerateAttempts = 10
+	// we are using a cycle here because we want to generate a new short code if the first one is already taken
 	for range maxGenerateAttempts {
 		shortCode := uuid.New().String()[:6]
 		now := time.Now().UTC()
