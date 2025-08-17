@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"shortener/internal/api"
+	"shortener/internal/storage/cached"
 	"shortener/internal/storage/postgres"
 	"shortener/internal/validator"
 
@@ -36,8 +37,14 @@ func main() {
 	}
 	defer store.Close()
 
+	cache, err := cached.New(ctx, cfg.GetString("redis.host"), cfg.GetString("redis.password"), 0)
+	if err != nil {
+		zlog.Logger.Warn().Err(err).Msg("failed to connect to redis, caching is disabled")
+		cache = nil
+	}
+
 	v := validator.New()
-	srv := api.New(store, store, *v)
+	srv := api.New(store, store, *v, cache)
 	// Register routes (with ctx for async click logging)
 	srv.RegisterRoutes(ctx)
 

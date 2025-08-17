@@ -5,6 +5,12 @@ postgres:
   # Optional read replicas
   slaves: []
 
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+  pool_size: 10
+
 server:
   addrs:
     - "0.0.0.0:8080"

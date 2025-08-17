@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"regexp"
 	"shortener/internal/domain"
@@ -11,7 +12,7 @@ import (
 
 var aliasRe = regexp.MustCompile(`^[a-zA-Z0-9_-]{3,32}$`)
 
-func (s *Server) postShorten() func(c *ginext.Context) {
+func (s *Server) postShorten(ctx context.Context) func(c *ginext.Context) {
 	return func(c *ginext.Context) {
 		var req domain.ShortenRequest
 		if err := c.BindJSON(&req); err != nil {

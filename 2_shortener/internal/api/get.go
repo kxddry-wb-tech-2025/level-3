@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kxddry/wbf/ginext"
+	"github.com/kxddry/wbf/zlog"
 )
 
 func (s *Server) getShorten(ctx context.Context) func(c *ginext.Context) {
@@ -19,6 +20,32 @@ func (s *Server) getShorten(ctx context.Context) func(c *ginext.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "short code is required"})
 			return
 		}
+
+		if s.cache != nil {
+			url, err := s.cache.GetURL(c.Request.Context(), shortCode)
+			if err != nil && !errors.Is(err, storage.ErrNotFound) {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			if err == nil {
+				go func() {
+					if err := s.clickStorage.SaveClick(ctx, domain.Click{
+						ShortCode: shortCode,
+						UserAgent: c.GetHeader("User-Agent"),
+						IP:        c.ClientIP(),
+						Referer:   c.GetHeader("Referer"),
+						Timestamp: time.Now(),
+					}); err != nil {
+						zlog.Logger.Error().Err(err).Msg("failed to save click")
+					}
+				}()
+
+				c.Redirect(http.StatusTemporaryRedirect, url)
+				return
+			}
+		}
+
 		url, err := s.urlStorage.GetURL(c.Request.Context(), shortCode)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
@@ -29,13 +56,26 @@ func (s *Server) getShorten(ctx context.Context) func(c *ginext.Context) {
 			return
 		}
 
-		go s.clickStorage.SaveClick(ctx, domain.Click{
-			ShortCode: shortCode,
-			UserAgent: c.GetHeader("User-Agent"),
-			IP:        c.ClientIP(),
-			Referer:   c.GetHeader("Referer"),
-			Timestamp: time.Now(),
-		})
+		go func() {
+			if err := s.clickStorage.SaveClick(ctx, domain.Click{
+				ShortCode: shortCode,
+				UserAgent: c.GetHeader("User-Agent"),
+				IP:        c.ClientIP(),
+				Referer:   c.GetHeader("Referer"),
+				Timestamp: time.Now(),
+			}); err != nil {
+				zlog.Logger.Error().Err(err).Msg("failed to save click")
+			}
+
+			if usage, err := s.clickStorage.ClickCount(ctx, shortCode); err == nil && usage >= domain.MinUsageForCache {
+				if s.cache == nil {
+					return
+				}
+				if err := s.cache.SetURL(ctx, shortCode, url, usage); err != nil {
+					zlog.Logger.Error().Err(err).Msg("failed to set cached URL")
+				}
+			}
+		}()
 
 		c.Redirect(http.StatusTemporaryRedirect, url)
 	}
