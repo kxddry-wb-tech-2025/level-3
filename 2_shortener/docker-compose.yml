@@ -17,6 +17,20 @@ services:
       retries: 10
       start_period: 5s
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
   migrator:
     image: migrate/migrate:v4.17.1
     container_name: migrator
@@ -33,3 +47,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

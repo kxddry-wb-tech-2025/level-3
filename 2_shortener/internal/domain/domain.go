@@ -36,3 +36,6 @@ type AnalyticsResponse struct {
 	TopReferers   map[string]int64 `json:"top_referers,omitempty"`
 	TopIPs        map[string]int64 `json:"top_ips,omitempty"`
 }
+
+// MinUsageForCache is the minimum number of clicks required to cache a URL.
+const MinUsageForCache = 10
