@@ -46,13 +46,23 @@ func (s *Storage) Close() error {
 // SaveURL inserts a new URL with a generated short code.
 // Handles collisions by re-generating codes and retrying with ExecWithRetry.
 // Returns the generated short code or an error if the operation fails.
-func (s *Storage) SaveURL(ctx context.Context, url string) (string, error) {
+func (s *Storage) SaveURL(ctx context.Context, url string, withAlias bool, alias string) (string, error) {
 	const insertQuery = `
 		INSERT INTO shortened_urls (url, short_code, created_at)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (short_code) DO NOTHING
 	`
 
+	if withAlias {
+		res, err := s.db.ExecWithRetry(ctx, Strategy, insertQuery, url, alias, time.Now().UTC())
+		if err != nil {
+			return "", err
+		}
+		if rows, err := res.RowsAffected(); err == nil && rows == 1 {
+			return alias, nil
+		}
+		return "", errors.New("alias already exists")
+	}
 	// we are using a cycle here because we want to generate a new short code if the first one is already taken
 	for range maxGenerateAttempts {
 		shortCode := uuid.New().String()[:6]
