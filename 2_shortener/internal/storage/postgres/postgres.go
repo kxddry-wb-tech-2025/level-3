@@ -2,16 +2,13 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"errors"
-	"shortener/internal/domain"
 	"shortener/internal/storage"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/kxddry/wbf/dbpg"
 	"github.com/kxddry/wbf/retry"
-	"github.com/kxddry/wbf/zlog"
 )
 
 var Strategy = retry.Strategy{
@@ -33,16 +30,7 @@ func New(ctx context.Context, master string, slaves []string) (*Storage, error) 
 	if err != nil {
 		return nil, err
 	}
-	s := &Storage{db: db}
-
-	go func() {
-		for range time.NewTicker(15 * time.Minute).C {
-			if err := s.updateSlavesURLs(ctx); err != nil {
-				zlog.Logger.Error().Err(err).Msg("failed to update slaves")
-			}
-		}
-	}()
-	return s, nil
+	return &Storage{db: db}, nil
 }
 
 func (s *Storage) Close() error {
@@ -52,115 +40,47 @@ func (s *Storage) Close() error {
 	return s.db.Master.Close()
 }
 
-func (s *Storage) updateSlavesURLs(ctx context.Context) error {
-	query := `
-		SELECT id, url, short_code, created_at 
-		FROM shortened_urls 
-		WHERE created_at > NOW() - INTERVAL '1 hour'
-		ORDER BY created_at DESC
-	`
-
-	rows, err := s.db.Master.QueryContext(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	var records []domain.ShortenedURL
-	for rows.Next() {
-		var record domain.ShortenedURL
-		if err := rows.Scan(&record.ID, &record.URL, &record.ShortCode, &record.CreatedAt); err != nil {
-			return err
-		}
-		records = append(records, record)
-	}
-
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	// Replicate to each slave
-	for i, slave := range s.db.Slaves {
-		for _, record := range records {
-			insertQuery := `
-				INSERT INTO shortened_urls (id, url, short_code, created_at)
-				VALUES ($1, $2, $3, $4)
-				ON CONFLICT (short_code) DO NOTHING
-			`
-			_, err := slave.ExecContext(ctx, insertQuery, record.ID, record.URL, record.ShortCode, record.CreatedAt)
-			if err != nil {
-				zlog.Logger.Error().
-					Err(err).
-					Int("slave_index", i).
-					Str("short_code", record.ShortCode).
-					Msg("failed to replicate URL to slave")
-				continue
-			}
-		}
-	}
-
-	zlog.Logger.Info().
-		Int("records_count", len(records)).
-		Int("slaves_count", len(s.db.Slaves)).
-		Msg("completed slave update")
-
-	return nil
-}
-
+// SaveURL inserts a new URL with a generated short code.
+// Handles collisions by re-generating codes and retrying with ExecWithRetry.
 func (s *Storage) SaveURL(ctx context.Context, url string) (string, error) {
-	tx, err := s.db.Master.BeginTx(ctx, nil)
-	if err != nil {
-		return "", err
-	}
-	defer tx.Rollback()
-
-	shortCode := uuid.New().String()[:6]
-	now := time.Now().UTC()
-
-	query := `
+	const insertQuery = `
 		INSERT INTO shortened_urls (url, short_code, created_at)
 		VALUES ($1, $2, $3)
-		RETURNING id
+		ON CONFLICT (short_code) DO NOTHING
 	`
-	if err := tx.QueryRowContext(ctx, query, url, shortCode, now).Scan(&shortCode); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			err = retry.Do(func() error {
-				shortCode = uuid.New().String()[:6]
-				return tx.QueryRowContext(ctx, query, url, shortCode, now).Scan(&shortCode)
-			}, retry.Strategy{
-				Attempts: 3,
-				Delay:    1 * time.Second,
-				Backoff:  2,
-			})
-			if err != nil {
-				return "", err
-			}
-		} else {
+
+	const maxGenerateAttempts = 10
+	for range maxGenerateAttempts {
+		shortCode := uuid.New().String()[:6]
+		now := time.Now().UTC()
+
+		res, err := s.db.ExecWithRetry(ctx, Strategy, insertQuery, url, shortCode, now)
+		if err != nil {
 			return "", err
 		}
+		if rows, err := res.RowsAffected(); err == nil && rows == 1 {
+			return shortCode, nil
+		}
 	}
-
-	if err := tx.Commit(); err != nil {
-		return "", err
-	}
-	return shortCode, nil
+	return "", errors.New("could not generate unique short code after multiple attempts")
 }
 
 func (s *Storage) GetURL(ctx context.Context, shortCode string) (string, error) {
-	query := `
+	const query = `
 		SELECT url FROM shortened_urls WHERE short_code = $1
 	`
-	var url string
-	rows, err := s.db.QueryContext(ctx, query, shortCode)
+
+	rows, err := s.db.QueryWithRetry(ctx, Strategy, query, shortCode)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", storage.ErrNotFound
-		}
 		return "", err
 	}
+	defer rows.Close()
+
 	if !rows.Next() {
 		return "", storage.ErrNotFound
 	}
+
+	var url string
 	if err := rows.Scan(&url); err != nil {
 		return "", err
 	}
