@@ -13,3 +13,7 @@ func New() *Validator {
 func (v *Validator) URL(url string) error {
 	return v.validate.Var(url, "required,url")
 }
+
+func (v *Validator) Struct(s interface{}) error {
+	return v.validate.Struct(s)
+}
