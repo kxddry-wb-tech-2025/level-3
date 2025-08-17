@@ -47,4 +47,5 @@ func (s *Server) Run(ctx context.Context) error {
 
 func (s *Server) RegisterRoutes(r *ginext.Engine) {
 	r.POST("/shorten", s.postShorten())
+	r.GET("/s/:short_code", s.getShorten())
 }
