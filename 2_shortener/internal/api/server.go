@@ -47,6 +47,8 @@ func New(urlStorage URLStorage, clickStorage ClickStorage, validator validator.V
 	}
 	g := ginext.New()
 
+	_ = g.SetTrustedProxies(nil)
+
 	return &Server{g: g, addrs: addrs, urlStorage: urlStorage, clickStorage: clickStorage, validator: validator, cache: cache}
 }
 
