@@ -19,6 +19,8 @@ func main() {
 
 	zlog.Init()
 
+	// this config is ABSOLUTELY shit and should be replaced with something better, but I have to use it for the project.
+	// TODO: replace it with something better. (Please, WildBerries.)
 	cfg := config.New()
 	if err := cfg.Load(os.Getenv("CONFIG_PATH")); err != nil {
 		zlog.Logger.Info().Msg("CONFIG_PATH is not set, searching for config.yaml in the current directory")
