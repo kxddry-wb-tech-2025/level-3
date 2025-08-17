@@ -2,9 +2,11 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"shortener/internal/domain"
+	"shortener/internal/storage"
 )
 
 const topLimit = 20
@@ -220,6 +222,13 @@ func (s *Storage) Analytics(ctx context.Context, shortCode string, from, to *tim
 	}
 	if to != nil && !to.IsZero() {
 		end = to
+	}
+
+	if _, err := s.GetURL(ctx, shortCode); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return domain.AnalyticsResponse{}, errors.New("short code not found")
+		}
+		return domain.AnalyticsResponse{}, err
 	}
 
 	total, err := s.ClickCount(ctx, shortCode)
