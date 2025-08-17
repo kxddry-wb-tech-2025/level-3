@@ -1,0 +1,15 @@
+postgres:
+  # Master connection string (required)
+  master: "postgres://user:password@localhost:5432/shortener?sslmode=disable"
+
+  # Optional read replicas
+  slaves: []
+
+server:
+  addrs:
+    - "0.0.0.0:8080"
+
+db:
+  max_open_conns: 10
+  max_idle_conns: 5
+  conn_max_lifetime: 1h
