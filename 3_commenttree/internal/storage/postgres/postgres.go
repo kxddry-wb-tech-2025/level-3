@@ -44,6 +44,12 @@ func (s *Storage) AddComment(ctx context.Context, comment domain.Comment) (domai
 }
 
 func (s *Storage) GetComments(ctx context.Context, parentID string) (*domain.CommentTree, error) {
+	// if parentID is empty, use NULL to avoid UUID errors
+	var parentParam sql.NullString
+	if parentID != "" {
+		parentParam = sql.NullString{String: parentID, Valid: true}
+	}
+
 	query := `
 		WITH RECURSIVE thread AS (
 			SELECT id, content, parent_id, created_at
@@ -59,7 +65,7 @@ func (s *Storage) GetComments(ctx context.Context, parentID string) (*domain.Com
 		ORDER BY created_at ASC;
 	`
 
-	rows, err := s.db.QueryContext(ctx, query, parentID)
+	rows, err := s.db.QueryContext(ctx, query, parentParam)
 	if err != nil {
 		return nil, err
 	}
