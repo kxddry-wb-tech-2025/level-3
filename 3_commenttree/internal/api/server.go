@@ -16,6 +16,7 @@ import (
 type Storage interface {
 	AddComment(ctx context.Context, comment domain.Comment) error
 	GetComments(ctx context.Context, parentID string) (domain.CommentTree, error)
+	DeleteComments(ctx context.Context, id string) error
 }
 
 type Server struct {
@@ -35,12 +36,13 @@ func New(st Storage) *Server {
 func (s *Server) setRoutes() {
 	s.r.POST("/comments", s.postComment())
 	s.r.GET("/comments", s.getComment())
+	s.r.DELETE("/comments/:id", s.deleteComment())
 }
 
 func (s *Server) getComment() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		parentID := c.Query("parent")
-		if uuid.MustParse(parentID) == uuid.Nil {
+		if _, err := uuid.Parse(parentID); parentID != "" && err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid parent id"})
 			return
 		}
@@ -84,5 +86,22 @@ func (s *Server) postComment() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, comment)
+	}
+}
+
+func (s *Server) deleteComment() gin.HandlerFunc {
+	return func(c *ginext.Context) {
+		id := c.Param("id")
+		if _, err := uuid.Parse(id); id != "" && err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		if err := s.st.DeleteComments(c.Request.Context(), id); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "comments deleted"})
 	}
 }
