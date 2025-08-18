@@ -496,9 +496,10 @@
             const date = new Date(comment.created_at).toLocaleString('ru-RU');
             const nestedClass = level > 0 ? 'nested' : '';
             const content = highlightSearchText(comment.content);
+            const indentStyle = level > 0 ? `style="margin-left: ${level * 30}px"` : '';
             
             return `
-                <div class="comment ${nestedClass}" data-comment-id="${comment.id}">
+                <div class="comment ${nestedClass}" ${indentStyle} data-comment-id="${comment.id}">
                     <div class="comment-header">
                         <span class="comment-date">${date}</span>
                         <div class="comment-actions">
