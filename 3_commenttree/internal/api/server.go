@@ -15,7 +15,7 @@ import (
 )
 
 type Storage interface {
-	AddComment(ctx context.Context, comment domain.Comment) error
+	AddComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
 	GetComments(ctx context.Context, parentID string) (*domain.CommentTree, error)
 	DeleteComments(ctx context.Context, id string) error
 }
@@ -89,14 +89,19 @@ func (s *Server) postComment() gin.HandlerFunc {
 			return
 		}
 
+		if _, err := uuid.Parse(req.ParentID); req.ParentID != "" && err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid parent id"})
+			return
+		}
+
 		comment := domain.Comment{
-			ID:        uuid.New().String(),
 			Content:   req.Content,
 			ParentID:  req.ParentID,
 			CreatedAt: time.Now(),
 		}
 
-		if err := s.st.AddComment(c.Request.Context(), comment); err != nil {
+		comment, err := s.st.AddComment(c.Request.Context(), comment)
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
