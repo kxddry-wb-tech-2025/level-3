@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Древовидные комментарии</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .search-section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            background: #f8f9fa;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .add-comment-section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            background: #f8f9fa;
+        }
+
+        .comment-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .comment-textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        .comments-section {
+            padding: 20px;
+            min-height: 300px;
+        }
+
+        .comment {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        .comment.nested {
+            margin-left: 30px;
+            border-left: 3px solid #3498db;
+            background: #f8f9fa;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        .comment-id {
+            font-size: 12px;
+            color: #666;
+            margin-right: 10px;
+        }
+
+        .comment-date {
+            flex: 1;
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .comment-content {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .reply-form {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .reply-form.active {
+            display: block;
+        }
+
+        .reply-textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 60px;
+            font-family: inherit;
+            margin-bottom: 10px;
+        }
+
+        .reply-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            color: #e74c3c;
+            background: #fdf2f2;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .success {
+            color: #27ae60;
+            background: #f0f9f0;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .comments-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px 10px 20px;
+            gap: 10px;
+        }
+        
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            font-size: 14px;
+        }
+
+        .search-results {
+            background: #e8f4f8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        /* Стили для toast уведомлений */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 350px;
+        }
+
+        .toast {
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease-in-out;
+            position: relative;
+            max-width: 100%;
+            word-wrap: break-word;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast.hide {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+
+        .toast-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .toast-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .toast-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .toast-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .toast-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.7;
+            padding: 0;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
+        .toast-close:hover {
+            opacity: 1;
+        }
+
+        /* Стили для модального окна */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            transform: scale(0.7);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-icon {
+            font-size: 24px;
+            color: #e74c3c;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+
+        .modal-body {
+            padding: 20px 24px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .modal-footer {
+            padding: 16px 24px 20px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            border-top: 1px solid #eee;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+            min-width: 80px;
+        }
+
+        .modal-btn-cancel {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .modal-btn-confirm {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            background: #c0392b;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .comment.nested {
+                margin-left: 15px;
+            }
+
+            .toast-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+
+            .toast {
+                margin: 0;
+            }
+
+            .modal {
+                width: 95%;
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Древовидные комментарии</h1>
+        </div>
+
+        <!-- Поиск -->
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" class="search-input" placeholder="Поиск по тексту комментариев...">
+                <button onclick="searchComments()" class="btn btn-primary">Найти</button>
+                <button onclick="clearSearch()" class="btn btn-secondary">Очистить</button>
+            </div>
+            <div class="search-box">
+                <input type="text" id="parentIdInput" class="search-input" placeholder="ID родительского комментария...">
+                <button onclick="searchByParentId()" class="btn btn-primary">Найти дерево</button>
+            </div>
+            <div id="searchResults"></div>
+        </div>
+
+        <!-- Форма добавления комментария -->
+        <div class="add-comment-section">
+            <h3>Добавить комментарий</h3>
+            <div class="comment-form">
+                <textarea id="newCommentText" class="comment-textarea" placeholder="Напишите ваш комментарий..."></textarea>
+                <button onclick="addComment()" class="btn btn-primary">Добавить комментарий</button>
+            </div>
+        </div>
+
+        <!-- Список комментариев -->
+        <div class="comments-section">
+            <div class="comments-controls">
+                <div class="pagination">
+                    <button id="prevPageBtn" onclick="goToPrevPage()" class="btn btn-secondary">Назад</button>
+                    <span id="pageIndicator">Страница 1</span>
+                    <button id="nextPageBtn" onclick="goToNextPage()" class="btn btn-secondary">Вперёд</button>
+                </div>
+                <div>
+                    <label for="sortOrderSelect">Сортировка:</label>
+                    <select id="sortOrderSelect" class="select" onchange="changeSort(this.value)">
+                        <option value="asc">Сначала старые</option>
+                        <option value="desc">Сначала новые</option>
+                    </select>
+                </div>
+            </div>
+            <div id="commentsContainer">
+                <div class="loading">Загрузка комментариев...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Контейнер для toast уведомлений -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Модальное окно подтверждения -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-icon">⚠️</span>
+                <h3 class="modal-title" id="modalTitle">Подтверждение</h3>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage">Вы уверены?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" onclick="closeConfirmModal(false)">Отмена</button>
+                <button class="modal-btn modal-btn-confirm" onclick="closeConfirmModal(true)">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация API
+        const API_BASE = ''; // Измените на ваш базовый URL API
+
+        // Состояние приложения
+        let comments = [];
+        let searchQuery = '';
+        let currentPage = 1;
+        let pageSize = 20;
+        let sortOrder = 'asc'; // asc or desc
+        let hasMore = true;
+
+        // Переменные для модального окна
+        let modalResolve = null;
+
+        // Инициализация при загрузке страницы
+        window.addEventListener('DOMContentLoaded', function() {
+            loadComments();
+            
+            // Обработка Enter в полях поиска
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchComments();
+                }
+            });
+            
+            document.getElementById('parentIdInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchByParentId();
+                }
+            });
+
+            const sortSelect = document.getElementById('sortOrderSelect');
+            if (sortSelect) {
+                sortSelect.value = sortOrder;
+            }
+
+            // Закрытие модального окна по клику на overlay
+            document.getElementById('confirmModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeConfirmModal(false);
+                }
+            });
+
+            // Закрытие модального окна по Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('confirmModal');
+                    if (modal.classList.contains('show')) {
+                        closeConfirmModal(false);
+                    }
+                }
+            });
+        });
+
+        // Функции для toast уведомлений
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const toastId = 'toast-' + Date.now();
+            
+            toast.id = toastId;
+            toast.className = `toast toast-${type}`;
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || icons.info}</span>
+                <span class="toast-content">${message}</span>
+                <button class="toast-close" onclick="removeToast('${toastId}')">&times;</button>
+            `;
+
+            container.appendChild(toast);
+
+            // Анимация появления
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+
+            // Автоудаление
+            if (duration > 0) {
+                setTimeout(() => {
+                    removeToast(toastId);
+                }, duration);
+            }
+
+            return toastId;
+        }
+
+        function removeToast(toastId) {
+            const toast = document.getElementById(toastId);
+            if (toast) {
+                toast.classList.remove('show');
+                toast.classList.add('hide');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }
+        }
+
+        // Функции для модального окна подтверждения
+        function showConfirmModal(title, message) {
+            return new Promise((resolve) => {
+                modalResolve = resolve;
+                
+                document.getElementById('modalTitle').textContent = title;
+                document.getElementById('modalMessage').textContent = message;
+                
+                const modal = document.getElementById('confirmModal');
+                modal.classList.add('show');
+                
+                // Фокус на кнопке отмены
+                modal.querySelector('.modal-btn-cancel').focus();
+            });
+        }
+
+        function closeConfirmModal(confirmed) {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('show');
+            
+            if (modalResolve) {
+                modalResolve(confirmed);
+                modalResolve = null;
+            }
+        }
+
+        // Загрузка комментариев
+        async function loadComments() {
+            try {
+                showLoading();
+                const params = new URLSearchParams({
+                    page: String(currentPage),
+                    limit: String(pageSize),
+                    order: sortOrder,
+                });
+                const response = await fetch(`${API_BASE}/comments?${params.toString()}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const roots = Array.isArray(data) ? data : (data.children || []);
+                comments = roots;
+                hasMore = roots.length === pageSize;
+                renderComments();
+                updateControls();
+            } catch (error) {
+                showToast('Ошибка загрузки комментариев: ' + error.message, 'error');
+                showError('Ошибка загрузки комментариев: ' + error.message);
+            }
+        }
+
+        // Добавление нового комментария
+        async function addComment(parentId = '') {
+            const textArea = parentId ? 
+                document.getElementById(`replyText-${parentId}`) : 
+                document.getElementById('newCommentText');
+            
+            const content = textArea.value.trim();
+            
+            if (!content) {
+                showToast('Пожалуйста, введите текст комментария', 'warning');
+                return;
+            }
+
+            try {
+                const requestData = { content };
+                if (parentId) {
+                    requestData.parent_id = parentId;
+                }
+
+                const response = await fetch(`${API_BASE}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                textArea.value = '';
+                if (parentId) {
+                    toggleReplyForm(parentId);
+                }
+                
+                showToast('Комментарий успешно добавлен!', 'success');
+                await loadComments();
+                
+            } catch (error) {
+                showToast('Ошибка добавления комментария: ' + error.message, 'error');
+            }
+        }
+
+        // Удаление комментария
+        async function deleteComment(commentId) {
+            const confirmed = await showConfirmModal(
+                'Удаление комментария',
+                'Вы уверены, что хотите удалить этот комментарий и все ответы к нему? Это действие нельзя отменить.'
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/comments/${commentId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                showToast('Комментарий успешно удален!', 'success');
+                await loadComments();
+                
+            } catch (error) {
+                showToast('Ошибка удаления комментария: ' + error.message, 'error');
+            }
+        }
+
+        // Поиск комментариев по тексту
+        async function searchComments() {
+            const query = document.getElementById('searchInput').value.trim();
+            
+            if (!query) {
+                clearSearch();
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    q: query,
+                    page: String(currentPage),
+                    limit: String(pageSize),
+                });
+                const response = await fetch(`${API_BASE}/comments/search?${params.toString()}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const results = await response.json();
+                searchQuery = query;
+                
+                document.getElementById('searchResults').innerHTML = 
+                    `<div class="search-results">Найдено по тексту: ${results.length} комментариев</div>`;
+                
+                hasMore = results.length === pageSize;
+                renderSearchResults(results);
+                updateControls();
+                
+                if (results.length > 0) {
+                    showToast(`Найдено ${results.length} комментариев`, 'success');
+                } else {
+                    showToast('По вашему запросу ничего не найдено', 'info');
+                }
+                
+            } catch (error) {
+                showToast('Ошибка поиска: ' + error.message, 'error');
+            }
+        }
+
+        // Поиск комментариев по parent ID
+        async function searchByParentId() {
+            const parentId = document.getElementById('parentIdInput').value.trim();
+            
+            if (!parentId) {
+                showToast('Введите ID родительского комментария', 'warning');
+                return;
+            }
+
+            // Проверяем, что ID соответствует формату UUID
+            if (!parentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+                showToast('Неверный формат ID комментария', 'error');
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    parent: parentId,
+                    order: sortOrder,
+                });
+
+                const response = await fetch(`${API_BASE}/comments?${params.toString()}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                searchQuery = '';
+                
+                document.getElementById('searchResults').innerHTML = 
+                    `<div class="search-results">Комментарии с родителем ID: ${parentId}</div>`;
+                
+                if (result) {
+                    // Если API возвращает дерево комментариев
+                    const container = document.getElementById('commentsContainer');
+                    container.innerHTML = renderCommentTree(result);
+                    hasMore = false;
+                    currentPage = 1;
+                    updateControls();
+                    showToast('Найдены дочерние комментарии', 'success');
+                } else {
+                    document.getElementById('commentsContainer').innerHTML = 
+                        '<div class="empty-state">Комментарий с указанным ID не найден или у него нет потомков</div>';
+                    showToast('Комментарий не найден или у него нет потомков', 'info');
+                }
+                
+            } catch (error) {
+                showToast('Ошибка поиска по parent ID: ' + error.message, 'error');
+            }
+        }
+
+        // Очистка поиска
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('parentIdInput').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+            searchQuery = '';
+            currentPage = 1;
+            showToast('Поиск очищен', 'info');
+            loadComments();
+        }
+
+        // Рендеринг комментариев
+        function renderComments() {
+            const container = document.getElementById('commentsContainer');
+            
+            if (!comments || comments.length === 0) {
+                container.innerHTML = '<div class="empty-state">Комментариев пока нет. Будьте первым!</div>';
+                return;
+            }
+
+            container.innerHTML = comments.map(comment => renderCommentTree(comment)).join('');
+            updateControls();
+        }
+
+        // Рендеринг результатов поиска
+        function renderSearchResults(results) {
+            const container = document.getElementById('commentsContainer');
+            
+            if (!results || results.length === 0) {
+                container.innerHTML = '<div class="empty-state">По вашему запросу ничего не найдено</div>';
+                return;
+            }
+
+            container.innerHTML = results.map(comment => renderComment(comment, false)).join('');
+        }
+
+        // Рендеринг дерева комментариев
+        function renderCommentTree(comment, level = 0) {
+            let html = renderComment(comment, true, level);
+            
+            if (comment.children && comment.children.length > 0) {
+                html += comment.children.map(child => renderCommentTree(child, level + 1)).join('');
+            }
+            
+            return html;
+        }
+
+        // Рендеринг отдельного комментария
+        function renderComment(comment, showReplyForm = true, level = 0) {
+            const date = new Date(comment.created_at).toLocaleString('ru-RU');
+            const nestedClass = level > 0 ? 'nested' : '';
+            const content = highlightSearchText(comment.content);
+            const indentStyle = level > 0 ? `style="margin-left: ${level * 30}px"` : '';
+            
+            return `
+                <div class="comment ${nestedClass}" ${indentStyle} data-comment-id="${comment.id}">
+                    <div class="comment-header">
+                        <span class="comment-date">${date}</span>
+                        <span class="comment-id">${comment.id}</span>
+                        <div class="comment-actions">
+                            ${showReplyForm ? `<button onclick="toggleReplyForm('${comment.id}')" class="btn btn-secondary">Ответить</button>` : ''}
+                            <button onclick="deleteComment('${comment.id}')" class="btn btn-danger">Удалить</button>
+                        </div>
+                    </div>
+                    <div class="comment-content">${content}</div>
+                    ${showReplyForm ? `
+                    <div id="replyForm-${comment.id}" class="reply-form">
+                        <textarea id="replyText-${comment.id}" class="reply-textarea" placeholder="Напишите ответ..."></textarea>
+                        <div class="reply-actions">
+                            <button type="button" onclick="addComment('${comment.id}')" class="btn btn-primary">Отправить</button>
+                            <button type="button" onclick="toggleReplyForm('${comment.id}')" class="btn btn-secondary">Отмена</button>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Подсветка найденного текста
+        function highlightSearchText(text) {
+            if (!searchQuery) return text;
+            
+            const regex = new RegExp(`(${escapeRegex(searchQuery)})`, 'gi');
+            return text.replace(regex, '<mark>$1</mark>');
+        }
+
+        // Экранирование специальных символов для регулярного выражения
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Переключение формы ответа
+        function toggleReplyForm(commentId) {
+            const form = document.getElementById(`replyForm-${commentId}`);
+            const isActive = form.classList.contains('active');
+            
+            // Закрыть все открытые формы
+            document.querySelectorAll('.reply-form.active').forEach(f => {
+                f.classList.remove('active');
+            });
+            
+            if (!isActive) {
+                form.classList.add('active');
+                document.getElementById(`replyText-${commentId}`).focus();
+            }
+        }
+
+        // Показать сообщение об ошибке
+        function showError(message) {
+            const container = document.getElementById('searchResults');
+            container.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        // Показать сообщение об успехе
+        function showSuccess(message) {
+            // Создаем временное сообщение
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.textContent = message;
+            
+            // Вставляем в начало контейнера
+            const container = document.querySelector('.comments-section');
+            container.insertBefore(successDiv, container.firstChild);
+            
+            // Удаляем через 3 секунды
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.parentNode.removeChild(successDiv);
+                }
+            }, 3000);
+        }
+
+        // Показать индикатор загрузки
+        function showLoading() {
+            const container = document.getElementById('commentsContainer');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+        }
+
+        function goToPrevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                if (searchQuery) {
+                    searchComments();
+                } else {
+                    loadComments();
+                }
+            }
+        }
+
+        function goToNextPage() {
+            if (hasMore) {
+                currentPage++;
+                if (searchQuery) {
+                    searchComments();
+                } else {
+                    loadComments();
+                }
+            }
+        }
+
+        function changeSort(order) {
+            sortOrder = order === 'desc' ? 'desc' : 'asc';
+            currentPage = 1;
+            if (searchQuery) {
+                searchComments();
+            } else {
+                loadComments();
+            }
+        }
+
+        function updateControls() {
+            const pageElement = document.getElementById('pageIndicator');
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+            const sortSelect = document.getElementById('sortOrderSelect');
+            
+            if (pageElement) pageElement.textContent = `Страница ${currentPage}`;
+            if (prevBtn) prevBtn.disabled = currentPage <= 1;
+            if (nextBtn) nextBtn.disabled = !hasMore;
+            if (sortSelect) sortSelect.value = sortOrder;
+        }
+
+        // Обработка Enter в textarea
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                const textarea = e.target;
+                if (textarea.tagName === 'TEXTAREA') {
+                    if (textarea.id === 'newCommentText') {
+                        addComment();
+                    } else if (textarea.id.startsWith('replyText-')) {
+                        const commentId = textarea.id.replace('replyText-', '');
+                        addComment(commentId);
+                    }
+                }
+            }
+        });
+
+        // Периодическое обновление комментариев (каждые 30 секунд)
+        setInterval(() => {
+            if (!searchQuery) {
+                loadComments();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
