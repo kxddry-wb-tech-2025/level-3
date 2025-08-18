@@ -307,7 +307,8 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                comments = await response.json();
+                const data = await response.json();
+                comments = Array.isArray(data) ? data : (data.children || []);
                 renderComments();
             } catch (error) {
                 showError('Ошибка загрузки комментариев: ' + error.message);

@@ -25,7 +25,12 @@ func (s *Storage) AddComment(ctx context.Context, comment domain.Comment) (domai
 		RETURNING id
 	`
 
-	rows, err := s.db.QueryContext(ctx, query, comment.Content, comment.ParentID, comment.CreatedAt)
+	var parentParam sql.NullString
+	if comment.ParentID != "" {
+		parentParam = sql.NullString{String: comment.ParentID, Valid: true}
+	}
+
+	rows, err := s.db.QueryContext(ctx, query, comment.Content, parentParam, comment.CreatedAt)
 	if err != nil {
 		return domain.Comment{}, err
 	}
