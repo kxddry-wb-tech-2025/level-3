@@ -144,6 +144,11 @@
             font-size: 12px;
             color: #666;
         }
+        .comment-id {
+            font-size: 12px;
+            color: #666;
+            margin-right: 10px;
+        }
 
         .comment-date {
             flex: 1;
@@ -502,6 +507,7 @@
                 <div class="comment ${nestedClass}" ${indentStyle} data-comment-id="${comment.id}">
                     <div class="comment-header">
                         <span class="comment-date">${date}</span>
+                        <span class="comment-id">${comment.id}</span>
                         <div class="comment-actions">
                             ${showReplyForm ? `<button onclick="toggleReplyForm('${comment.id}')" class="btn btn-secondary">Ответить</button>` : ''}
                             <button onclick="deleteComment('${comment.id}')" class="btn btn-danger">Удалить</button>
