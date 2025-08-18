@@ -1,4 +1,7 @@
+# example of config.yaml
+
+
 db:
-  dsn: postgres://postgres:postgres@localhost:5432/commenttree?sslmode=disable
+  dsn: postgres://postgres:postgres@postgres:5432/commenttree?sslmode=disable
 server:
-  addr: :8080
+  addr: 0.0.0.0:8080

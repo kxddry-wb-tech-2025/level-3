@@ -101,8 +101,8 @@ func (s *Server) getComment() gin.HandlerFunc {
 }
 
 func (s *Server) Run(addrs ...string) error {
-	if len(addrs) == 0 {
-		addrs = []string{":8080"}
+	if len(addrs) == 0 || addrs[0] == "" {
+		addrs = []string{"0.0.0.0:8080"}
 	}
 	return s.r.Run(addrs...)
 }

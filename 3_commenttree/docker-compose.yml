@@ -1,12 +1,26 @@
 services:
+
+  commenttree:
+    build: .
+    container_name: commenttree
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - CONFIG_FILE=/app/config.yaml
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./static:/app/static
   postgres:
     image: postgres:17
     container_name: postgres
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: postgres # In prod, you would probably use a secret
       POSTGRES_DB: commenttree
     volumes:
       - postgres_data:/var/lib/postgresql/data
