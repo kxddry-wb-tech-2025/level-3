@@ -300,7 +300,7 @@
                 </div>
                 <div>
                     <label for="sortOrderSelect">Сортировка:</label>
-                    <select id="sortOrderSelect" class="select">
+                    <select id="sortOrderSelect" class="select" onchange="changeSort(this.value)">
                         <option value="asc">Сначала старые</option>
                         <option value="desc">Сначала новые</option>
                     </select>
