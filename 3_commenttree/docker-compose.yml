@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: commenttree
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-commenttree} || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  migrator:
+    image: migrate/migrate:v4.17.1
+    container_name: migrator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migration:/migration:ro
+    command:
+      - -path=/migration
+      - -database
+      - postgres://postgres:postgres@postgres:5432/commenttree?sslmode=disable
+      - up
+
+volumes:
+  postgres_data:
