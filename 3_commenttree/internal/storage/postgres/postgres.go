@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/kxddry/wbf/dbpg"
 )
@@ -43,33 +44,59 @@ func (s *Storage) AddComment(ctx context.Context, comment domain.Comment) (domai
 	return comment, nil
 }
 
-func (s *Storage) GetComments(ctx context.Context, parentID string) (*domain.CommentTree, error) {
-	// if parentID is empty, use NULL to avoid UUID errors
-	var parentParam sql.NullString
-	if parentID != "" {
-		parentParam = sql.NullString{String: parentID, Valid: true}
+func (s *Storage) GetComments(ctx context.Context, parentID string, asc bool, limit, offset int) (*domain.CommentTree, error) {
+	orderDir := "ASC"
+	if !asc {
+		orderDir = "DESC"
 	}
 
-	query := `
-		WITH RECURSIVE thread AS (
-			SELECT id, content, parent_id, created_at
-			FROM comments
-			WHERE (
-				$1::uuid IS NULL AND parent_id IS NULL
-			) OR (
-				$1::uuid IS NOT NULL AND id = $1::uuid
-			)
-			UNION ALL
-			SELECT c.id, c.content, c.parent_id, c.created_at
-			FROM comments c
-			INNER JOIN thread t ON c.parent_id = t.id
-		)
-		SELECT id, content, parent_id, created_at
-		FROM thread
-		ORDER BY created_at ASC;
-	`
+	var (
+		query       string
+		args        []any
+	)
 
-	rows, err := s.db.QueryContext(ctx, query, parentParam)
+	if parentID == "" {
+		// Paginate root comments and expand their subtrees
+		query = fmt.Sprintf(`
+			WITH roots AS (
+				SELECT id
+				FROM comments
+				WHERE parent_id IS NULL
+				ORDER BY created_at %s
+				LIMIT $1 OFFSET $2
+			),
+			thread AS (
+				SELECT c.id, c.content, c.parent_id, c.created_at
+				FROM comments c
+				JOIN roots r ON c.id = r.id
+				UNION ALL
+				SELECT c.id, c.content, c.parent_id, c.created_at
+				FROM comments c
+				INNER JOIN thread t ON c.parent_id = t.id
+			)
+			SELECT id, content, parent_id, created_at
+			FROM thread
+			ORDER BY created_at %s;`, orderDir, orderDir)
+		args = []any{limit, offset}
+	} else {
+		// Return whole subtree for a given parent
+		query = fmt.Sprintf(`
+			WITH RECURSIVE thread AS (
+				SELECT id, content, parent_id, created_at
+				FROM comments
+				WHERE id = $1
+				UNION ALL
+				SELECT c.id, c.content, c.parent_id, c.created_at
+				FROM comments c
+				INNER JOIN thread t ON c.parent_id = t.id
+			)
+			SELECT id, content, parent_id, created_at
+			FROM thread
+			ORDER BY created_at %s;`, orderDir)
+		args = []any{parentID}
+	}
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +155,35 @@ func (s *Storage) GetComments(ctx context.Context, parentID string) (*domain.Com
 
 	attachChildren(rootComment)
 	return rootComment, nil
+}
+
+func (s *Storage) SearchComments(ctx context.Context, q string, limit, offset int) ([]domain.Comment, error) {
+	query := `
+		SELECT id, content, parent_id, created_at
+		FROM comments
+		WHERE to_tsvector('simple', content) @@ plainto_tsquery('simple', $1)
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3;
+	`
+	rows, err := s.db.QueryContext(ctx, query, q, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []domain.Comment
+	for rows.Next() {
+		var c domain.Comment
+		var parentNullable sql.NullString
+		if err := rows.Scan(&c.ID, &c.Content, &parentNullable, &c.CreatedAt); err != nil {
+			return nil, err
+		}
+		if parentNullable.Valid {
+			c.ParentID = parentNullable.String
+		}
+		out = append(out, c)
+	}
+	return out, nil
 }
 
 func (s *Storage) DeleteComments(ctx context.Context, id string) error {

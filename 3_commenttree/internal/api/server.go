@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -16,8 +18,9 @@ import (
 
 type Storage interface {
 	AddComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
-	GetComments(ctx context.Context, parentID string) (*domain.CommentTree, error)
+	GetComments(ctx context.Context, parentID string, asc bool, limit, offset int) (*domain.CommentTree, error)
 	DeleteComments(ctx context.Context, id string) error
+	SearchComments(ctx context.Context, q string, limit, offset int) ([]domain.Comment, error)
 }
 
 type Server struct {
@@ -49,6 +52,7 @@ func (s *Server) setMiddlewares() {
 func (s *Server) setRoutes() {
 	s.r.POST("/comments", s.postComment())
 	s.r.GET("/comments", s.getComment())
+	s.r.GET("/comments/search", s.searchComments())
 	s.r.DELETE("/comments/:id", s.deleteComment())
 	s.r.StaticFile("/", "./static/index.html")
 }
@@ -61,7 +65,26 @@ func (s *Server) getComment() gin.HandlerFunc {
 			return
 		}
 
-		commentTree, err := s.st.GetComments(c.Request.Context(), parentID)
+		// pagination and sorting
+		pageStr := c.Query("page")
+		limitStr := c.Query("limit")
+		order := strings.ToLower(strings.TrimSpace(c.Query("order")))
+
+		page := 1
+		limit := 20
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 200 {
+			limit = l
+		}
+		offset := (page - 1) * limit
+		asc := true
+		if order == "desc" {
+			asc = false
+		}
+
+		commentTree, err := s.st.GetComments(c.Request.Context(), parentID, asc, limit, offset)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "comments not found"})
@@ -131,5 +154,34 @@ func (s *Server) deleteComment() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "comments deleted"})
+	}
+}
+
+func (s *Server) searchComments() gin.HandlerFunc {
+	return func(c *ginext.Context) {
+		q := strings.TrimSpace(c.Query("q"))
+		if q == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "q is required"})
+			return
+		}
+
+		pageStr := c.Query("page")
+		limitStr := c.Query("limit")
+		page := 1
+		limit := 50
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 200 {
+			limit = l
+		}
+		offset := (page - 1) * limit
+
+		res, err := s.st.SearchComments(c.Request.Context(), q, limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, res)
 	}
 }

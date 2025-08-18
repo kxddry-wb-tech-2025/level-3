@@ -222,6 +222,28 @@
             margin-bottom: 20px;
         }
 
+        .comments-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px 10px 20px;
+            gap: 10px;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            font-size: 14px;
+        }
+
         @media (max-width: 600px) {
             .container {
                 margin: 0;
@@ -265,6 +287,20 @@
 
         <!-- Список комментариев -->
         <div class="comments-section">
+            <div class="comments-controls">
+                <div class="pagination">
+                    <button id="prevPageBtn" onclick="goToPrevPage()" class="btn btn-secondary">Назад</button>
+                    <span id="pageIndicator">Стр. 1</span>
+                    <button id="nextPageBtn" onclick="goToNextPage()" class="btn btn-secondary">Вперед</button>
+                </div>
+                <div>
+                    <label for="sortOrderSelect">Сортировка:</label>
+                    <select id="sortOrderSelect" class="select" onchange="changeSort(this.value)">
+                        <option value="asc">Сначала старые</option>
+                        <option value="desc">Сначала новые</option>
+                    </select>
+                </div>
+            </div>
             <div id="commentsContainer">
                 <div class="loading">Загрузка комментариев...</div>
             </div>
@@ -278,6 +314,10 @@
         // Состояние приложения
         let comments = [];
         let searchQuery = '';
+        let currentPage = 1;
+        let pageSize = 20;
+        let sortOrder = 'asc'; // 'asc' | 'desc'
+        let hasMore = true;
 
         // Инициализация при загрузке страницы
         window.addEventListener('DOMContentLoaded', function() {
@@ -295,21 +335,34 @@
                     searchByParentId();
                 }
             });
+
+            const sortSelect = document.getElementById('sortOrderSelect');
+            if (sortSelect) {
+                sortSelect.value = sortOrder;
+            }
         });
 
         // Загрузка комментариев
         async function loadComments() {
             try {
                 showLoading();
-                const response = await fetch(`${API_BASE}/comments`);
+                const params = new URLSearchParams({
+                    page: String(currentPage),
+                    limit: String(pageSize),
+                    order: sortOrder,
+                });
+                const response = await fetch(`${API_BASE}/comments?${params.toString()}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const data = await response.json();
-                comments = Array.isArray(data) ? data : (data.children || []);
+                const roots = Array.isArray(data) ? data : (data.children || []);
+                comments = roots;
+                hasMore = roots.length === pageSize;
                 renderComments();
+                updateControls();
             } catch (error) {
                 showError('Ошибка загрузки комментариев: ' + error.message);
             }
@@ -392,7 +445,12 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/comments/search?q=${encodeURIComponent(query)}`);
+                const params = new URLSearchParams({
+                    q: query,
+                    page: String(currentPage),
+                    limit: String(pageSize),
+                });
+                const response = await fetch(`${API_BASE}/comments/search?${params.toString()}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -404,7 +462,9 @@
                 document.getElementById('searchResults').innerHTML = 
                     `<div class="search-results">Найдено по тексту: ${results.length} комментариев</div>`;
                 
+                hasMore = Array.isArray(results) && results.length === pageSize;
                 renderSearchResults(results);
+                updateControls();
                 
             } catch (error) {
                 showError('Ошибка поиска: ' + error.message);
@@ -421,7 +481,11 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/comments?parent=${encodeURIComponent(parentId)}`);
+                const params = new URLSearchParams({
+                    parent: parentId,
+                    order: sortOrder,
+                });
+                const response = await fetch(`${API_BASE}/comments?${params.toString()}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -437,6 +501,9 @@
                     // Если API возвращает дерево комментариев
                     const container = document.getElementById('commentsContainer');
                     container.innerHTML = renderCommentTree(result);
+                    hasMore = false;
+                    currentPage = 1;
+                    updateControls();
                 } else {
                     document.getElementById('commentsContainer').innerHTML = 
                         '<div class="empty-state">Комментарий с указанным ID не найден или у него нет потомков</div>';
@@ -453,7 +520,8 @@
             document.getElementById('parentIdInput').value = '';
             document.getElementById('searchResults').innerHTML = '';
             searchQuery = '';
-            renderComments();
+            currentPage = 1;
+            loadComments();
         }
 
         // Рендеринг комментариев
@@ -466,6 +534,7 @@
             }
 
             container.innerHTML = comments.map(comment => renderCommentTree(comment)).join('');
+            updateControls();
         }
 
         // Рендеринг результатов поиска
@@ -579,6 +648,50 @@
         function showLoading() {
             const container = document.getElementById('commentsContainer');
             container.innerHTML = '<div class="loading">Загрузка...</div>';
+        }
+
+        // Управление пагинацией и сортировкой
+        function goToPrevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                if (searchQuery) {
+                    searchComments();
+                } else {
+                    loadComments();
+                }
+            }
+        }
+
+        function goToNextPage() {
+            if (hasMore) {
+                currentPage++;
+                if (searchQuery) {
+                    searchComments();
+                } else {
+                    loadComments();
+                }
+            }
+        }
+
+        function changeSort(order) {
+            sortOrder = order === 'desc' ? 'desc' : 'asc';
+            currentPage = 1;
+            if (searchQuery) {
+                searchComments();
+            } else {
+                loadComments();
+            }
+        }
+
+        function updateControls() {
+            const pageEl = document.getElementById('pageIndicator');
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+            const sortSelect = document.getElementById('sortOrderSelect');
+            if (pageEl) pageEl.textContent = `Стр. ${currentPage}`;
+            if (prevBtn) prevBtn.disabled = currentPage <= 1;
+            if (nextBtn) nextBtn.disabled = !hasMore;
+            if (sortSelect) sortSelect.value = sortOrder;
         }
 
         // Обработка Enter в textarea
