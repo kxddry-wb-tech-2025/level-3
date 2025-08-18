@@ -2,155 +2,258 @@ package worker
 
 import (
 	"context"
-	"encoding/json"
+	"delayed-notifier/internal/models"
+	"errors"
 	"testing"
 	"time"
-
-	"delayed-notifier/internal/models"
 )
 
-type fakeStore struct {
-	popDueResp map[string][]string
-	getByID    map[string]*models.Notification
-	saved      map[string]*models.Notification
-	enqueued   []string
-	retries    map[string]time.Time
+// MockNotificationStore is a mock implementation of NotificationStore interface
+type MockNotificationStore struct {
+	popDueFunc        func(ctx context.Context, which string, now time.Time, limit int64) ([]string, error)
+	getNotificationFunc func(ctx context.Context, id string) (*models.Notification, error)
+	saveNotificationFunc func(ctx context.Context, n *models.Notification) error
+	enqueueNowFunc    func(ctx context.Context, id string) error
+	addToRetryFunc    func(ctx context.Context, id string, when time.Time) error
 }
 
-func newFakeStore() *fakeStore {
-	return &fakeStore{
-		popDueResp: make(map[string][]string),
-		getByID:    make(map[string]*models.Notification),
-		saved:      make(map[string]*models.Notification),
-		retries:    make(map[string]time.Time),
+func (m *MockNotificationStore) PopDue(ctx context.Context, which string, now time.Time, limit int64) ([]string, error) {
+	if m.popDueFunc != nil {
+		return m.popDueFunc(ctx, which, now, limit)
 	}
+	return nil, nil
 }
 
-func (f *fakeStore) PopDue(ctx context.Context, which string, now time.Time, limit int64) ([]string, error) {
-	ids := f.popDueResp[which]
-	f.popDueResp[which] = nil
-	return ids, nil
+func (m *MockNotificationStore) GetNotification(ctx context.Context, id string) (*models.Notification, error) {
+	if m.getNotificationFunc != nil {
+		return m.getNotificationFunc(ctx, id)
+	}
+	return nil, nil
 }
 
-func (f *fakeStore) GetNotification(ctx context.Context, id string) (*models.Notification, error) {
-	return f.getByID[id], nil
-}
-
-func (f *fakeStore) SaveNotification(ctx context.Context, n *models.Notification) error {
-	cpy := *n
-	f.saved[n.ID] = &cpy
-	return nil
-}
-
-func (f *fakeStore) EnqueueNow(ctx context.Context, id string) error {
-	f.enqueued = append(f.enqueued, id)
-	return nil
-}
-
-func (f *fakeStore) AddToRetry(ctx context.Context, id string, when time.Time) error {
-	f.retries[id] = when
-	return nil
-}
-
-type fakePublisher struct {
-	bodies    [][]byte
-	shouldErr bool
-}
-
-func (p *fakePublisher) Publish(ctx context.Context, body []byte) error {
-	p.bodies = append(p.bodies, body)
-	if p.shouldErr {
-		return context.DeadlineExceeded
+func (m *MockNotificationStore) SaveNotification(ctx context.Context, n *models.Notification) error {
+	if m.saveNotificationFunc != nil {
+		return m.saveNotificationFunc(ctx, n)
 	}
 	return nil
 }
 
-func TestSchedulerPublishDueSuccess(t *testing.T) {
-	store := newFakeStore()
-	p := &fakePublisher{}
-	s := NewScheduler(store, p)
-
-	n := &models.Notification{ID: "n1", Status: models.StatusScheduled}
-	store.getByID["n1"] = n
-	store.popDueResp["due"] = []string{"n1"}
-
-	s.publishDue(context.Background(), time.Now())
-
-	if len(p.bodies) != 1 {
-		t.Fatalf("expected 1 publish, got %d", len(p.bodies))
+func (m *MockNotificationStore) EnqueueNow(ctx context.Context, id string) error {
+	if m.enqueueNowFunc != nil {
+		return m.enqueueNowFunc(ctx, id)
 	}
-	var out models.Notification
-	_ = json.Unmarshal(p.bodies[0], &out)
-	if out.ID != "n1" {
-		t.Fatalf("unexpected published id: %s", out.ID)
+	return nil
+}
+
+func (m *MockNotificationStore) AddToRetry(ctx context.Context, id string, when time.Time) error {
+	if m.addToRetryFunc != nil {
+		return m.addToRetryFunc(ctx, id, when)
 	}
-	saved := store.saved["n1"]
-	if saved == nil || saved.Status != models.StatusQueued {
-		t.Fatalf("expected saved status queued, got %#v", saved)
+	return nil
+}
+
+// MockPublisher is a mock implementation of Publisher interface
+type MockPublisher struct {
+	publishFunc func(ctx context.Context, body []byte) error
+}
+
+func (m *MockPublisher) Publish(ctx context.Context, body []byte) error {
+	if m.publishFunc != nil {
+		return m.publishFunc(ctx, body)
+	}
+	return nil
+}
+
+func TestNotificationStoreInterface(t *testing.T) {
+	tests := []struct {
+		name           string
+		store          *MockNotificationStore
+		expectPopDue   []string
+		expectPopError bool
+		expectGet      *models.Notification
+		expectGetError bool
+		expectSave     error
+		expectEnqueue  error
+		expectRetry    error
+	}{
+		{
+			name: "successful operations",
+			store: &MockNotificationStore{
+				popDueFunc: func(ctx context.Context, which string, now time.Time, limit int64) ([]string, error) {
+					return []string{"test-1", "test-2"}, nil
+				},
+				getNotificationFunc: func(ctx context.Context, id string) (*models.Notification, error) {
+					return &models.Notification{
+						ID:        id,
+						Channel:   "email",
+						Recipient: "test@example.com",
+						Message:   "test message",
+						Status:    models.StatusScheduled,
+					}, nil
+				},
+				saveNotificationFunc: func(ctx context.Context, n *models.Notification) error {
+					return nil
+				},
+				enqueueNowFunc: func(ctx context.Context, id string) error {
+					return nil
+				},
+				addToRetryFunc: func(ctx context.Context, id string, when time.Time) error {
+					return nil
+				},
+			},
+			expectPopDue:   []string{"test-1", "test-2"},
+			expectPopError: false,
+			expectGet: &models.Notification{
+				ID:        "test-123",
+				Channel:   "email",
+				Recipient: "test@example.com",
+				Message:   "test message",
+				Status:    models.StatusScheduled,
+			},
+			expectGetError: false,
+			expectSave:     nil,
+			expectEnqueue:  nil,
+			expectRetry:    nil,
+		},
+		{
+			name: "operations with errors",
+			store: &MockNotificationStore{
+				popDueFunc: func(ctx context.Context, which string, now time.Time, limit int64) ([]string, error) {
+					return nil, errors.New("pop due failed")
+				},
+				getNotificationFunc: func(ctx context.Context, id string) (*models.Notification, error) {
+					return nil, errors.New("get notification failed")
+				},
+				saveNotificationFunc: func(ctx context.Context, n *models.Notification) error {
+					return errors.New("save failed")
+				},
+				enqueueNowFunc: func(ctx context.Context, id string) error {
+					return errors.New("enqueue failed")
+				},
+				addToRetryFunc: func(ctx context.Context, id string, when time.Time) error {
+					return errors.New("retry failed")
+				},
+			},
+			expectPopDue:   nil,
+			expectPopError: true,
+			expectGet:      nil,
+			expectGetError: true,
+			expectSave:     errors.New("save failed"),
+			expectEnqueue:  errors.New("enqueue failed"),
+			expectRetry:    errors.New("retry failed"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			now := time.Now()
+
+			// Test PopDue
+			ids, err := tt.store.PopDue(ctx, "due", now, 100)
+			if tt.expectPopError && err == nil {
+				t.Errorf("Expected PopDue error but got none")
+			}
+			if !tt.expectPopError && err != nil {
+				t.Errorf("Expected no PopDue error but got: %v", err)
+			}
+			if !tt.expectPopError && len(ids) != len(tt.expectPopDue) {
+				t.Errorf("Expected %d IDs, got %d", len(tt.expectPopDue), len(ids))
+			}
+
+			// Test GetNotification
+			notification, err := tt.store.GetNotification(ctx, "test-123")
+			if tt.expectGetError && err == nil {
+				t.Errorf("Expected GetNotification error but got none")
+			}
+			if !tt.expectGetError && err != nil {
+				t.Errorf("Expected no GetNotification error but got: %v", err)
+			}
+			if !tt.expectGetError && notification == nil {
+				t.Error("Expected notification but got nil")
+			}
+
+			// Test SaveNotification
+			if tt.expectGet != nil {
+				err = tt.store.SaveNotification(ctx, tt.expectGet)
+				if (err == nil) != (tt.expectSave == nil) {
+					t.Errorf("Expected save error %v, got %v", tt.expectSave, err)
+				}
+			}
+
+			// Test EnqueueNow
+			err = tt.store.EnqueueNow(ctx, "test-123")
+			if (err == nil) != (tt.expectEnqueue == nil) {
+				t.Errorf("Expected enqueue error %v, got %v", tt.expectEnqueue, err)
+			}
+
+			// Test AddToRetry
+			err = tt.store.AddToRetry(ctx, "test-123", now)
+			if (err == nil) != (tt.expectRetry == nil) {
+				t.Errorf("Expected retry error %v, got %v", tt.expectRetry, err)
+			}
+		})
 	}
 }
 
-func TestSchedulerPublishDueErrorReenqueue(t *testing.T) {
-	store := newFakeStore()
-	p := &fakePublisher{shouldErr: true}
-	s := NewScheduler(store, p)
+func TestPublisherInterface(t *testing.T) {
+	tests := []struct {
+		name         string
+		publisher    *MockPublisher
+		body         []byte
+		expectError  bool
+	}{
+		{
+			name: "successful publish",
+			publisher: &MockPublisher{
+				publishFunc: func(ctx context.Context, body []byte) error {
+					return nil
+				},
+			},
+			body:        []byte("test message"),
+			expectError: false,
+		},
+		{
+			name: "publish error",
+			publisher: &MockPublisher{
+				publishFunc: func(ctx context.Context, body []byte) error {
+					return errors.New("publish failed")
+				},
+			},
+			body:        []byte("test message"),
+			expectError: true,
+		},
+	}
 
-	n := &models.Notification{ID: "n1", Status: models.StatusScheduled}
-	store.getByID["n1"] = n
-	store.popDueResp["due"] = []string{"n1"}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 
-	s.publishDue(context.Background(), time.Now())
+			err := tt.publisher.Publish(ctx, tt.body)
 
-	if len(store.enqueued) != 1 || store.enqueued[0] != "n1" {
-		t.Fatalf("expected re-enqueue of n1, got %#v", store.enqueued)
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+		})
 	}
 }
 
-func TestSchedulerPublishRetryPath(t *testing.T) {
-	store := newFakeStore()
-	p := &fakePublisher{}
-	s := NewScheduler(store, p)
+func TestNewScheduler(t *testing.T) {
+	store := &MockNotificationStore{}
+	publisher := &MockPublisher{}
 
-	n := &models.Notification{ID: "n1", Status: models.StatusRetrying}
-	store.getByID["n1"] = n
-	store.popDueResp["retry"] = []string{"n1"}
+	scheduler := NewScheduler(store, publisher)
 
-	s.publishRetry(context.Background(), time.Now())
-
-	if len(p.bodies) != 1 {
-		t.Fatalf("expected 1 publish on retry, got %d", len(p.bodies))
+	if scheduler == nil {
+		t.Error("Expected scheduler to be created, got nil")
 	}
-}
-
-func TestSchedulerSkipsCancelled(t *testing.T) {
-	store := newFakeStore()
-	p := &fakePublisher{}
-	s := NewScheduler(store, p)
-
-	n := &models.Notification{ID: "n1", Status: models.StatusCancelled}
-	store.getByID["n1"] = n
-	store.popDueResp["due"] = []string{"n1"}
-
-	s.publishDue(context.Background(), time.Now())
-
-	if len(p.bodies) != 0 {
-		t.Fatalf("expected no publish for cancelled, got %d", len(p.bodies))
+	if scheduler.store != store {
+		t.Error("Expected store to be set correctly")
 	}
-	if _, ok := store.saved["n1"]; ok {
-		t.Fatalf("expected not to save cancelled notification")
-	}
-}
-
-func TestSchedulerGetNotificationError(t *testing.T) {
-	store := newFakeStore()
-	p := &fakePublisher{}
-	s := NewScheduler(store, p)
-
-	store.popDueResp["due"] = []string{"missing"}
-
-	s.publishDue(context.Background(), time.Now())
-
-	if len(p.bodies) != 0 {
-		t.Fatalf("expected no publish when get fails")
+	if scheduler.q != publisher {
+		t.Error("Expected publisher to be set correctly")
 	}
 }

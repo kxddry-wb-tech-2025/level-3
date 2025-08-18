@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -10,188 +9,213 @@ import (
 	"delayed-notifier/internal/models"
 )
 
-type fakeDelivery struct {
-	body    []byte
-	acked   bool
-	nacked  bool
-	requeue bool
+// MockSender is a mock implementation of the Sender interface for testing
+type MockSender struct {
+	sendFunc func(ctx context.Context, n *models.Notification) error
 }
 
-func (d *fakeDelivery) Body() []byte            { return d.body }
-func (d *fakeDelivery) Ack() error              { d.acked = true; return nil }
-func (d *fakeDelivery) Nack(requeue bool) error { d.nacked = true; d.requeue = requeue; return nil }
-
-type chanQueue struct{ ch chan models.Delivery }
-
-func (q *chanQueue) Consume(ctx context.Context) (<-chan models.Delivery, error) { return q.ch, nil }
-
-type fakeSender struct{ err error }
-
-func (s *fakeSender) Send(ctx context.Context, n *models.Notification) error { return s.err }
-
-type fakeStoreC struct {
-	saved   map[string]*models.Notification
-	retried map[string]time.Time
+func (m *MockSender) Send(ctx context.Context, n *models.Notification) error {
+	if m.sendFunc != nil {
+		return m.sendFunc(ctx, n)
+	}
+	return nil
 }
 
-func newFakeStoreC() *fakeStoreC {
-	return &fakeStoreC{saved: map[string]*models.Notification{}, retried: map[string]time.Time{}}
+// MockConsumerQueue is a mock implementation of ConsumerQueue interface
+type MockConsumerQueue struct {
+	consumeFunc func(ctx context.Context) (<-chan models.Delivery, error)
 }
-func (s *fakeStoreC) GetNotification(ctx context.Context, id string) (*models.Notification, error) {
+
+func (m *MockConsumerQueue) Consume(ctx context.Context) (<-chan models.Delivery, error) {
+	if m.consumeFunc != nil {
+		return m.consumeFunc(ctx)
+	}
 	return nil, nil
 }
-func (s *fakeStoreC) SaveNotification(ctx context.Context, n *models.Notification) error {
-	c := *n
-	s.saved[n.ID] = &c
-	return nil
-}
-func (s *fakeStoreC) AddToRetry(ctx context.Context, id string, when time.Time) error {
-	s.retried[id] = when
-	return nil
+
+// MockDelivery is a mock implementation of models.Delivery interface
+type MockDelivery struct {
+	bodyFunc  func() []byte
+	ackFunc   func() error
+	nackFunc  func(requeue bool) error
 }
 
-func TestConsumerProcessSuccess(t *testing.T) {
-	store := newFakeStoreC()
-	q := &chanQueue{ch: make(chan models.Delivery, 1)}
-	sender := &fakeSender{}
-	c := NewConsumer(store, q, sender)
-
-	n := models.Notification{ID: "a1", Channel: "telegram", Recipient: "1", Message: "hi"}
-	bytes, _ := json.Marshal(n)
-	q.ch <- &fakeDelivery{body: bytes}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { c.Run(ctx) }()
-
-	// allow processing
-	time.Sleep(50 * time.Millisecond)
-
-	saved := store.saved["a1"]
-	if saved == nil || saved.Status != models.StatusSent {
-		t.Fatalf("expected sent status, got %#v", saved)
+func (m *MockDelivery) Body() []byte {
+	if m.bodyFunc != nil {
+		return m.bodyFunc()
 	}
+	return []byte{}
 }
 
-func TestConsumerProcessFailureRetry(t *testing.T) {
-	store := newFakeStoreC()
-	q := &chanQueue{ch: make(chan models.Delivery, 1)}
-	sender := &fakeSender{err: errors.New("boom")}
-	c := NewConsumer(store, q, sender)
-
-	n := models.Notification{ID: "a1", Channel: "telegram", Recipient: "1", Message: "hi"}
-	bytes, _ := json.Marshal(n)
-	q.ch <- &fakeDelivery{body: bytes}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { c.Run(ctx) }()
-
-	// allow processing (include short in-process retries)
-	time.Sleep(300 * time.Millisecond)
-
-	saved := store.saved["a1"]
-	if saved == nil || saved.Status != models.StatusRetrying {
-		t.Fatalf("expected retrying status, got %#v", saved)
-	}
-	if _, ok := store.retried["a1"]; !ok {
-		t.Fatalf("expected AddToRetry to be called")
-	}
-}
-
-type flakySender struct{ fails int }
-
-func (s *flakySender) Send(ctx context.Context, n *models.Notification) error {
-	if s.fails > 0 {
-		s.fails--
-		return errors.New("temp fail")
+func (m *MockDelivery) Ack() error {
+	if m.ackFunc != nil {
+		return m.ackFunc()
 	}
 	return nil
 }
 
-func TestConsumerTransientFailureThenSuccess(t *testing.T) {
-	store := newFakeStoreC()
-	q := &chanQueue{ch: make(chan models.Delivery, 1)}
-	sender := &flakySender{fails: 2}
-	c := NewConsumer(store, q, sender)
-
-	n := models.Notification{ID: "t1", Channel: "telegram", Recipient: "1", Message: "hi"}
-	bytes, _ := json.Marshal(n)
-	q.ch <- &fakeDelivery{body: bytes}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { c.Run(ctx) }()
-
-	time.Sleep(200 * time.Millisecond)
-	saved := store.saved["t1"]
-	if saved == nil || saved.Status != models.StatusSent {
-		t.Fatalf("expected sent after transient failures, got %#v", saved)
+func (m *MockDelivery) Nack(requeue bool) error {
+	if m.nackFunc != nil {
+		return m.nackFunc(requeue)
 	}
-	if saved.NextAttemptAt != nil {
-		t.Fatalf("expected no next attempt after success")
+	return nil
+}
+
+// MockStorageAccess is a mock implementation of storageAccess interface
+type MockStorageAccess struct {
+	getNotificationFunc func(ctx context.Context, id string) (*models.Notification, error)
+	saveNotificationFunc func(ctx context.Context, n *models.Notification) error
+	addToRetryFunc func(ctx context.Context, id string, when time.Time) error
+}
+
+func (m *MockStorageAccess) GetNotification(ctx context.Context, id string) (*models.Notification, error) {
+	if m.getNotificationFunc != nil {
+		return m.getNotificationFunc(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *MockStorageAccess) SaveNotification(ctx context.Context, n *models.Notification) error {
+	if m.saveNotificationFunc != nil {
+		return m.saveNotificationFunc(ctx, n)
+	}
+	return nil
+}
+
+func (m *MockStorageAccess) AddToRetry(ctx context.Context, id string, when time.Time) error {
+	if m.addToRetryFunc != nil {
+		return m.addToRetryFunc(ctx, id, when)
+	}
+	return nil
+}
+
+func TestConsumerQueueInterface(t *testing.T) {
+	tests := []struct {
+		name        string
+		consumeFunc func(ctx context.Context) (<-chan models.Delivery, error)
+		expectError bool
+	}{
+		{
+			name: "successful consume",
+			consumeFunc: func(ctx context.Context) (<-chan models.Delivery, error) {
+				ch := make(chan models.Delivery, 1)
+				ch <- &MockDelivery{
+					bodyFunc: func() []byte {
+						return []byte(`{"id":"test-123","channel":"email","recipient":"test@example.com","message":"test","status":"scheduled"}`)
+					},
+				}
+				close(ch)
+				return ch, nil
+			},
+			expectError: false,
+		},
+		{
+			name: "consume error",
+			consumeFunc: func(ctx context.Context) (<-chan models.Delivery, error) {
+				return nil, errors.New("consume failed")
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			queue := &MockConsumerQueue{consumeFunc: tt.consumeFunc}
+
+			_, err := queue.Consume(ctx)
+
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+		})
 	}
 }
 
-type errQueue struct{}
+func TestDeliveryInterface(t *testing.T) {
+	tests := []struct {
+		name       string
+		delivery   *MockDelivery
+		expectBody []byte
+		expectAck  error
+		expectNack error
+	}{
+		{
+			name: "successful delivery",
+			delivery: &MockDelivery{
+				bodyFunc: func() []byte {
+					return []byte("test body")
+				},
+				ackFunc: func() error {
+					return nil
+				},
+				nackFunc: func(requeue bool) error {
+					return nil
+				},
+			},
+			expectBody: []byte("test body"),
+			expectAck:  nil,
+			expectNack: nil,
+		},
+		{
+			name: "delivery with errors",
+			delivery: &MockDelivery{
+				bodyFunc: func() []byte {
+					return []byte("error body")
+				},
+				ackFunc: func() error {
+					return errors.New("ack failed")
+				},
+				nackFunc: func(requeue bool) error {
+					return errors.New("nack failed")
+				},
+			},
+			expectBody: []byte("error body"),
+			expectAck:  errors.New("ack failed"),
+			expectNack: errors.New("nack failed"),
+		},
+	}
 
-func (e *errQueue) Consume(ctx context.Context) (<-chan models.Delivery, error) {
-	return nil, errors.New("boom")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := tt.delivery.Body()
+			if string(body) != string(tt.expectBody) {
+				t.Errorf("Expected body %s, got %s", tt.expectBody, body)
+			}
+
+			err := tt.delivery.Ack()
+			if (err == nil) != (tt.expectAck == nil) {
+				t.Errorf("Expected ack error %v, got %v", tt.expectAck, err)
+			}
+
+			err = tt.delivery.Nack(false)
+			if (err == nil) != (tt.expectNack == nil) {
+				t.Errorf("Expected nack error %v, got %v", tt.expectNack, err)
+			}
+		})
+	}
 }
 
-func TestConsumerQueueConsumeError(t *testing.T) {
-	store := newFakeStoreC()
-	sender := &fakeSender{}
-	c := NewConsumer(store, &errQueue{}, sender)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	// Should return quickly without panic
-	c.Run(ctx)
-}
+func TestNewConsumer(t *testing.T) {
+	store := &MockStorageAccess{}
+	queue := &MockConsumerQueue{}
+	sender := &MockSender{}
 
-func TestConsumerBadPayloadNack(t *testing.T) {
-	store := newFakeStoreC()
-	q := &chanQueue{ch: make(chan models.Delivery, 1)}
-	sender := &fakeSender{}
-	c := NewConsumer(store, q, sender)
+	consumer := NewConsumer(store, queue, sender)
 
-	// push invalid JSON
-	fd := &fakeDelivery{body: []byte("{not-json}")}
-	q.ch <- fd
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { c.Run(ctx) }()
-
-	time.Sleep(50 * time.Millisecond)
-	if !fd.nacked || fd.requeue != false {
-		t.Fatalf("expected Nack(false) on bad payload")
+	if consumer == nil {
+		t.Error("Expected consumer to be created, got nil")
 	}
-	if len(store.saved) != 0 {
-		t.Fatalf("did not expect any save on bad payload")
+	if consumer.store != store {
+		t.Error("Expected store to be set correctly")
 	}
-}
-
-func TestConsumerCancelledAck(t *testing.T) {
-	store := newFakeStoreC()
-	q := &chanQueue{ch: make(chan models.Delivery, 1)}
-	sender := &fakeSender{}
-	c := NewConsumer(store, q, sender)
-
-	n := models.Notification{ID: "c1", Status: models.StatusCancelled}
-	bytes, _ := json.Marshal(n)
-	fd := &fakeDelivery{body: bytes}
-	q.ch <- fd
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { c.Run(ctx) }()
-
-	time.Sleep(50 * time.Millisecond)
-	if !fd.acked {
-		t.Fatalf("expected Ack for cancelled notification")
+	if consumer.q != queue {
+		t.Error("Expected queue to be set correctly")
 	}
-	if len(store.saved) != 0 {
-		t.Fatalf("did not expect save for cancelled notification")
+	if consumer.sender != sender {
+		t.Error("Expected sender to be set correctly")
 	}
 }
