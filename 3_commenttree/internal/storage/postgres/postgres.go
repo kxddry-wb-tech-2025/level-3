@@ -94,6 +94,11 @@ func (s *Storage) GetComments(ctx context.Context, parentID string) (*domain.Com
 	}
 
 	if rootComment == nil {
+		// if there are no comments whatsoever, return empty tree
+		if parentID == "" {
+			return nil, nil
+		}
+		// if there are no comments for the given parentID, return not found
 		return nil, storage.ErrNotFound
 	}
 

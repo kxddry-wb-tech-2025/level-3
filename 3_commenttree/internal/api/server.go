@@ -70,6 +70,12 @@ func (s *Server) getComment() gin.HandlerFunc {
 			return
 		}
 
+		// err == nil && commentTree == nil means there are no comments whatsoever
+		if commentTree == nil {
+			c.JSON(http.StatusOK, gin.H{})
+			return
+		}
+
 		c.JSON(http.StatusOK, commentTree)
 	}
 }
