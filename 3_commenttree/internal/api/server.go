@@ -50,6 +50,7 @@ func (s *Server) setRoutes() {
 	s.r.POST("/comments", s.postComment())
 	s.r.GET("/comments", s.getComment())
 	s.r.DELETE("/comments/:id", s.deleteComment())
+	s.r.StaticFile("/", "./static/index.html")
 }
 
 func (s *Server) getComment() gin.HandlerFunc {
