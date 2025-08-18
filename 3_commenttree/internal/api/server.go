@@ -2,7 +2,9 @@ package api
 
 import (
 	"comment-tree/internal/domain"
+	"comment-tree/internal/storage"
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 
 type Storage interface {
 	AddComment(ctx context.Context, comment domain.Comment) error
+	GetComments(ctx context.Context, parentID string) (domain.CommentTree, error)
 }
 
 type Server struct {
@@ -31,6 +34,29 @@ func New(st Storage) *Server {
 
 func (s *Server) setRoutes() {
 	s.r.POST("/comments", s.postComment())
+	s.r.GET("/comments", s.getComment())
+}
+
+func (s *Server) getComment() gin.HandlerFunc {
+	return func(c *ginext.Context) {
+		parentID := c.Query("parent")
+		if uuid.MustParse(parentID) == uuid.Nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid parent id"})
+			return
+		}
+
+		comment, err := s.st.GetComments(c.Request.Context(), parentID)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "comments not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, comment)
+	}
 }
 
 func (s *Server) Run() error {
