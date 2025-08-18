@@ -60,7 +60,11 @@ func (s *Storage) GetComments(ctx context.Context, parentID string) (*domain.Com
 		WITH RECURSIVE thread AS (
 			SELECT id, content, parent_id, created_at
 			FROM comments
-			WHERE id = $1
+			WHERE (
+				$1::uuid IS NULL AND parent_id IS NULL
+			) OR (
+				$1::uuid IS NOT NULL AND id = $1::uuid
+			)
 			UNION ALL
 			SELECT c.id, c.content, c.parent_id, c.created_at
 			FROM comments c
@@ -79,11 +83,17 @@ func (s *Storage) GetComments(ctx context.Context, parentID string) (*domain.Com
 
 	childrenMap := make(map[string][]*domain.CommentTree)
 	var rootComment *domain.CommentTree
+	foundAny := false
 
 	for rows.Next() {
 		var c domain.Comment
-		if err := rows.Scan(&c.ID, &c.Content, &c.ParentID, &c.CreatedAt); err != nil {
+		var parentNullable sql.NullString
+		if err := rows.Scan(&c.ID, &c.Content, &parentNullable, &c.CreatedAt); err != nil {
 			return nil, err
+		}
+		foundAny = true
+		if parentNullable.Valid {
+			c.ParentID = parentNullable.String
 		}
 
 		node := &domain.CommentTree{
@@ -100,12 +110,16 @@ func (s *Storage) GetComments(ctx context.Context, parentID string) (*domain.Com
 	}
 
 	if rootComment == nil {
-		// if there are no comments whatsoever, return empty tree
+		// if there are no comments whatsoever, return empty tree if parentID is empty
 		if parentID == "" {
-			return nil, nil
+			if foundAny {
+				rootComment = &domain.CommentTree{}
+			} else {
+				return nil, nil
+			}
+		} else {
+			return nil, storage.ErrNotFound
 		}
-		// if there are no comments for the given parentID, return not found
-		return nil, storage.ErrNotFound
 	}
 
 	var attachChildren func(node *domain.CommentTree)
