@@ -485,6 +485,12 @@
                 return;
             }
 
+            // Проверяем, что ID соответствует формату UUID
+            if (!parentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+                showError('Неверный формат ID комментария');
+                return;
+            }
+
             try {
                 const params = new URLSearchParams({
                     parent: parentId,
@@ -628,7 +634,7 @@
 
         // Показать сообщение об ошибке
         function showError(message) {
-            const container = document.getElementById('commentsContainer');
+            const container = document.getElementById('searchResults');
             container.innerHTML = `<div class="error">${message}</div>`;
         }
 

@@ -61,10 +61,10 @@ func (s *Storage) GetComments(ctx context.Context, parentID string, asc bool, li
 
 	if parentID == "" {
 		query = fmt.Sprintf(`
-		WITH roots AS ( SELECT id FROM comments WHERE parent_id IS NULL ORDER BY created_at %s LIMIT $1 OFFSET $2),
+		WITH RECURSIVE roots AS ( SELECT id FROM comments WHERE parent_id IS NULL ORDER BY created_at %s LIMIT $1 OFFSET $2),
 		thread AS ( SELECT c.id, c.content, c.parent_id, c.created_at FROM comments c JOIN roots r ON c.id = r.id UNION ALL
 		SELECT c.id, c.content, c.parent_id, c.created_at FROM comments c INNER JOIN thread t ON c.parent_id = t.id)
-		SELECT id, content, parent_id, created_at FROM thread ORDER BY created_at %s;`, order, order )
+		SELECT id, content, parent_id, created_at FROM thread ORDER BY created_at %s;`, order, order)
 		args = []any{limit, offset}
 	} else {
 		query = fmt.Sprintf(`
@@ -75,7 +75,6 @@ func (s *Storage) GetComments(ctx context.Context, parentID string, asc bool, li
 			SELECT id, content, parent_id, created_at FROM thread ORDER BY created_at %s;`, order)
 		args = []any{parentID}
 	}
-
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -140,7 +139,7 @@ func (s *Storage) SearchComments(ctx context.Context, q string, limit, offset in
 	query := `
 		SELECT id, content, parent_id, created_at
 		FROM comments
-		WHERE to_tsvector('simple', content) @@ plainto_tsquery('simple', $1)
+		WHERE to_tsvector('simple', content) @@ to_tsquery('simple', $1 || ':*')
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -151,7 +150,7 @@ func (s *Storage) SearchComments(ctx context.Context, q string, limit, offset in
 	}
 	defer rows.Close()
 
-	var out []domain.Comment
+	out := []domain.Comment{}
 	for rows.Next() {
 		var c domain.Comment
 		var parentNullable sql.NullString
