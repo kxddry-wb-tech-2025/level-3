@@ -2,6 +2,6 @@
 
 
 db:
-  dsn: postgres://postgres:postgres@postgres:5432/commenttree?sslmode=disable
+  dsn: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/commenttree?sslmode=disable
 server:
   addr: 0.0.0.0:8080

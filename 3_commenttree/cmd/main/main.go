@@ -24,7 +24,8 @@ func main() {
 		zlog.Logger.Warn().Err(err).Msg("failed to load config at config.yaml")
 	}
 
-	db, err := dbpg.New(cfg.GetString("db.dsn"), nil, nil)
+	// Expand environment variables in the DSN
+	db, err := dbpg.New(os.ExpandEnv(cfg.GetString("db.dsn")), nil, nil)
 	if err != nil {
 		zlog.Logger.Fatal().Msg("failed to connect to database")
 	}

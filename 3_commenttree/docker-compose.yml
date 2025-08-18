@@ -20,7 +20,6 @@ services:
       - "5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres # In prod, you would probably use a secret
       POSTGRES_DB: commenttree
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -42,7 +41,7 @@ services:
     command:
       - -path=/migration
       - -database
-      - postgres://postgres:postgres@postgres:5432/commenttree?sslmode=disable
+      - postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/commenttree?sslmode=disable
       - up
 
 volumes:

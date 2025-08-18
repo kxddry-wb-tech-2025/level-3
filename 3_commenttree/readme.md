@@ -12,9 +12,14 @@
 git clone https://github.com/kxddry-wb-tech-2025/level-3
 ```
 
-2. Run the infrastructure
+2. Create a Postgres password
 ```bash
 cd level-3/3_commenttree
+echo 'POSTGRES_PASSWORD=<YOUR_POSTGRES_PASSWORD>' > .env
+```
+
+2. Run the infrastructure
+```bash
 docker-compose up [-d]
 
 # If needed, create .env file / config.yaml file (example shown)
