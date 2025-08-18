@@ -16,7 +16,7 @@ import (
 
 type Storage interface {
 	AddComment(ctx context.Context, comment domain.Comment) error
-	GetComments(ctx context.Context, parentID string) (domain.CommentTree, error)
+	GetComments(ctx context.Context, parentID string) (*domain.CommentTree, error)
 	DeleteComments(ctx context.Context, id string) error
 }
 
@@ -60,7 +60,7 @@ func (s *Server) getComment() gin.HandlerFunc {
 			return
 		}
 
-		comment, err := s.st.GetComments(c.Request.Context(), parentID)
+		commentTree, err := s.st.GetComments(c.Request.Context(), parentID)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "comments not found"})
@@ -70,12 +70,15 @@ func (s *Server) getComment() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, comment)
+		c.JSON(http.StatusOK, commentTree)
 	}
 }
 
-func (s *Server) Run() error {
-	return s.r.Run()
+func (s *Server) Run(addrs ...string) error {
+	if len(addrs) == 0 {
+		addrs = []string{":8080"}
+	}
+	return s.r.Run(addrs...)
 }
 
 func (s *Server) postComment() gin.HandlerFunc {

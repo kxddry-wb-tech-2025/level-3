@@ -34,7 +34,7 @@ func (s *Storage) AddComment(ctx context.Context, comment domain.Comment) error 
 	return nil
 }
 
-func (s *Storage) GetCommentTree(ctx context.Context, rootID string) (*domain.CommentTree, error) {
+func (s *Storage) GetComments(ctx context.Context, parentID string) (*domain.CommentTree, error) {
 	query := `
 		WITH RECURSIVE thread AS (
 			SELECT id, content, parent_id, created_at
@@ -50,7 +50,7 @@ func (s *Storage) GetCommentTree(ctx context.Context, rootID string) (*domain.Co
 		ORDER BY created_at ASC;
 	`
 
-	rows, err := s.db.QueryContext(ctx, query, rootID)
+	rows, err := s.db.QueryContext(ctx, query, parentID)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (s *Storage) GetCommentTree(ctx context.Context, rootID string) (*domain.Co
 			CreatedAt: c.CreatedAt,
 		}
 
-		if c.ID == rootID {
+		if c.ID == parentID {
 			rootComment = node
 		}
 
@@ -108,4 +108,12 @@ func (s *Storage) DeleteComments(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+func (s *Storage) Close() error {
+	for _, conn := range s.db.Slaves {
+		_ = conn.Close()
+	}
+
+	return s.db.Master.Close()
 }
