@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/kxddry/wbf/ginext"
@@ -29,8 +30,20 @@ func New(st Storage) *Server {
 
 	s := &Server{r: r, st: st}
 
+	s.setMiddlewares()
+
 	s.setRoutes()
 	return s
+}
+
+func (s *Server) setMiddlewares() {
+	s.r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{"GET", "POST", "DELETE"},
+		AllowHeaders: []string{"Content-Type"},
+	}))
+	s.r.Use(gin.Logger())
+	s.r.Use(gin.Recovery())
 }
 
 func (s *Server) setRoutes() {
