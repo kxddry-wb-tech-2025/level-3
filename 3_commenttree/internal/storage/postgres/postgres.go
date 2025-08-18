@@ -18,20 +18,29 @@ func New(db *dbpg.DB) *Storage {
 	return &Storage{db: db}
 }
 
-func (s *Storage) AddComment(ctx context.Context, comment domain.Comment) error {
+func (s *Storage) AddComment(ctx context.Context, comment domain.Comment) (domain.Comment, error) {
 	query := `
-		INSERT INTO comments (id, content, parent_id, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO comments (content, parent_id, created_at)
+		VALUES ($1, $2, $3)
+		RETURNING id
 	`
 
-	if _, err := s.db.ExecContext(ctx, query, comment.ID, comment.Content, comment.ParentID, comment.CreatedAt); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return storage.ErrNotFound
-		}
-		return err
+	rows, err := s.db.QueryContext(ctx, query, comment.Content, comment.ParentID, comment.CreatedAt)
+	if err != nil {
+		return domain.Comment{}, err
 	}
 
-	return nil
+	defer rows.Close()
+
+	if !rows.Next() {
+		return domain.Comment{}, storage.ErrNotFound
+	}
+
+	if err := rows.Scan(&comment.ID); err != nil {
+		return domain.Comment{}, err
+	}
+
+	return comment, nil
 }
 
 func (s *Storage) GetComments(ctx context.Context, parentID string) (*domain.CommentTree, error) {
