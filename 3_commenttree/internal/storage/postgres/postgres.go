@@ -39,7 +39,7 @@ func (s *Storage) GetCommentTree(ctx context.Context, rootID string) (*domain.Co
 		WITH RECURSIVE thread AS (
 			SELECT id, content, parent_id, created_at
 			FROM comments
-			WHERE id = $1  -- root comment
+			WHERE id = $1
 			UNION ALL
 			SELECT c.id, c.content, c.parent_id, c.created_at
 			FROM comments c
