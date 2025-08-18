@@ -18,10 +18,10 @@ func main() {
 	zlog.Init()
 	cfg := config.New()
 	if err := cfg.Load(os.Getenv("CONFIG_PATH")); err != nil {
-		zlog.Logger.Warn().Msg("failed to load config")
+		zlog.Logger.Warn().Err(err).Msg("failed to load config with CONFIG_PATH")
 	}
 	if err := cfg.Load("config.yaml"); err != nil {
-		zlog.Logger.Warn().Msg("failed to load config")
+		zlog.Logger.Warn().Err(err).Msg("failed to load config at config.yaml")
 	}
 
 	db, err := dbpg.New(cfg.GetString("db.dsn"), nil, nil)
