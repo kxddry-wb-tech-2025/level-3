@@ -249,6 +249,197 @@
             margin-bottom: 20px;
         }
 
+        /* Стили для toast уведомлений */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 350px;
+        }
+
+        .toast {
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease-in-out;
+            position: relative;
+            max-width: 100%;
+            word-wrap: break-word;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast.hide {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+
+        .toast-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .toast-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .toast-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .toast-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .toast-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.7;
+            padding: 0;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
+        .toast-close:hover {
+            opacity: 1;
+        }
+
+        /* Стили для модального окна */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            transform: scale(0.7);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-icon {
+            font-size: 24px;
+            color: #e74c3c;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+
+        .modal-body {
+            padding: 20px 24px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .modal-footer {
+            padding: 16px 24px 20px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            border-top: 1px solid #eee;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+            min-width: 80px;
+        }
+
+        .modal-btn-cancel {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .modal-btn-confirm {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            background: #c0392b;
+        }
+
         @media (max-width: 600px) {
             .container {
                 margin: 0;
@@ -257,6 +448,22 @@
             
             .comment.nested {
                 margin-left: 15px;
+            }
+
+            .toast-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+
+            .toast {
+                margin: 0;
+            }
+
+            .modal {
+                width: 95%;
+                margin: 10px;
             }
         }
     </style>
@@ -312,6 +519,26 @@
         </div>
     </div>
 
+    <!-- Контейнер для toast уведомлений -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Модальное окно подтверждения -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-icon">⚠️</span>
+                <h3 class="modal-title" id="modalTitle">Подтверждение</h3>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage">Вы уверены?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" onclick="closeConfirmModal(false)">Отмена</button>
+                <button class="modal-btn modal-btn-confirm" onclick="closeConfirmModal(true)">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Конфигурация API
         const API_BASE = ''; // Измените на ваш базовый URL API
@@ -323,6 +550,9 @@
         let pageSize = 20;
         let sortOrder = 'asc'; // asc or desc
         let hasMore = true;
+
+        // Переменные для модального окна
+        let modalResolve = null;
 
         // Инициализация при загрузке страницы
         window.addEventListener('DOMContentLoaded', function() {
@@ -345,7 +575,102 @@
             if (sortSelect) {
                 sortSelect.value = sortOrder;
             }
+
+            // Закрытие модального окна по клику на overlay
+            document.getElementById('confirmModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeConfirmModal(false);
+                }
+            });
+
+            // Закрытие модального окна по Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('confirmModal');
+                    if (modal.classList.contains('show')) {
+                        closeConfirmModal(false);
+                    }
+                }
+            });
         });
+
+        // Функции для toast уведомлений
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const toastId = 'toast-' + Date.now();
+            
+            toast.id = toastId;
+            toast.className = `toast toast-${type}`;
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || icons.info}</span>
+                <span class="toast-content">${message}</span>
+                <button class="toast-close" onclick="removeToast('${toastId}')">&times;</button>
+            `;
+
+            container.appendChild(toast);
+
+            // Анимация появления
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+
+            // Автоудаление
+            if (duration > 0) {
+                setTimeout(() => {
+                    removeToast(toastId);
+                }, duration);
+            }
+
+            return toastId;
+        }
+
+        function removeToast(toastId) {
+            const toast = document.getElementById(toastId);
+            if (toast) {
+                toast.classList.remove('show');
+                toast.classList.add('hide');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }
+        }
+
+        // Функции для модального окна подтверждения
+        function showConfirmModal(title, message) {
+            return new Promise((resolve) => {
+                modalResolve = resolve;
+                
+                document.getElementById('modalTitle').textContent = title;
+                document.getElementById('modalMessage').textContent = message;
+                
+                const modal = document.getElementById('confirmModal');
+                modal.classList.add('show');
+                
+                // Фокус на кнопке отмены
+                modal.querySelector('.modal-btn-cancel').focus();
+            });
+        }
+
+        function closeConfirmModal(confirmed) {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('show');
+            
+            if (modalResolve) {
+                modalResolve(confirmed);
+                modalResolve = null;
+            }
+        }
 
         // Загрузка комментариев
         async function loadComments() {
@@ -369,6 +694,7 @@
                 renderComments();
                 updateControls();
             } catch (error) {
+                showToast('Ошибка загрузки комментариев: ' + error.message, 'error');
                 showError('Ошибка загрузки комментариев: ' + error.message);
             }
         }
@@ -382,7 +708,7 @@
             const content = textArea.value.trim();
             
             if (!content) {
-                showError('Пожалуйста, введите текст комментария');
+                showToast('Пожалуйста, введите текст комментария', 'warning');
                 return;
             }
 
@@ -409,17 +735,22 @@
                     toggleReplyForm(parentId);
                 }
                 
-                showSuccess('Комментарий добавлен!');
+                showToast('Комментарий успешно добавлен!', 'success');
                 await loadComments();
                 
             } catch (error) {
-                showError('Ошибка добавления комментария: ' + error.message);
+                showToast('Ошибка добавления комментария: ' + error.message, 'error');
             }
         }
 
         // Удаление комментария
         async function deleteComment(commentId) {
-            if (!confirm('Вы уверены, что хотите удалить этот комментарий и все ответы к нему?')) {
+            const confirmed = await showConfirmModal(
+                'Удаление комментария',
+                'Вы уверены, что хотите удалить этот комментарий и все ответы к нему? Это действие нельзя отменить.'
+            );
+
+            if (!confirmed) {
                 return;
             }
 
@@ -432,11 +763,11 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                showSuccess('Комментарий удален!');
+                showToast('Комментарий успешно удален!', 'success');
                 await loadComments();
                 
             } catch (error) {
-                showError('Ошибка удаления комментария: ' + error.message);
+                showToast('Ошибка удаления комментария: ' + error.message, 'error');
             }
         }
 
@@ -471,8 +802,14 @@
                 renderSearchResults(results);
                 updateControls();
                 
+                if (results.length > 0) {
+                    showToast(`Найдено ${results.length} комментариев`, 'success');
+                } else {
+                    showToast('По вашему запросу ничего не найдено', 'info');
+                }
+                
             } catch (error) {
-                showError('Ошибка поиска: ' + error.message);
+                showToast('Ошибка поиска: ' + error.message, 'error');
             }
         }
 
@@ -481,13 +818,13 @@
             const parentId = document.getElementById('parentIdInput').value.trim();
             
             if (!parentId) {
-                showError('Введите ID родительского комментария');
+                showToast('Введите ID родительского комментария', 'warning');
                 return;
             }
 
             // Проверяем, что ID соответствует формату UUID
             if (!parentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-                showError('Неверный формат ID комментария');
+                showToast('Неверный формат ID комментария', 'error');
                 return;
             }
 
@@ -516,13 +853,15 @@
                     hasMore = false;
                     currentPage = 1;
                     updateControls();
+                    showToast('Найдены дочерние комментарии', 'success');
                 } else {
                     document.getElementById('commentsContainer').innerHTML = 
                         '<div class="empty-state">Комментарий с указанным ID не найден или у него нет потомков</div>';
+                    showToast('Комментарий не найден или у него нет потомков', 'info');
                 }
                 
             } catch (error) {
-                showError('Ошибка поиска по parent ID: ' + error.message);
+                showToast('Ошибка поиска по parent ID: ' + error.message, 'error');
             }
         }
 
@@ -533,6 +872,7 @@
             document.getElementById('searchResults').innerHTML = '';
             searchQuery = '';
             currentPage = 1;
+            showToast('Поиск очищен', 'info');
             loadComments();
         }
 
@@ -594,8 +934,8 @@
                     <div id="replyForm-${comment.id}" class="reply-form">
                         <textarea id="replyText-${comment.id}" class="reply-textarea" placeholder="Напишите ответ..."></textarea>
                         <div class="reply-actions">
-                            <button onclick="addComment('${comment.id}')" class="btn btn-primary">Отправить</button>
-                            <button onclick="toggleReplyForm('${comment.id}')" class="btn btn-secondary">Отмена</button>
+                            <button type="button" onclick="addComment('${comment.id}')" class="btn btn-primary">Отправить</button>
+                            <button type="button" onclick="toggleReplyForm('${comment.id}')" class="btn btn-secondary">Отмена</button>
                         </div>
                     </div>
                     ` : ''}
