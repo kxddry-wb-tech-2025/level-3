@@ -25,6 +25,7 @@ func (s *Storage) AddComment(ctx context.Context, comment domain.Comment) (domai
 		RETURNING id
 	`
 
+	// if parentID is empty (comment is a root comment), use NULL to avoid UUID errors
 	var parentParam sql.NullString
 	if comment.ParentID != "" {
 		parentParam = sql.NullString{String: comment.ParentID, Valid: true}
