@@ -1,0 +1,4 @@
+db:
+  dsn: postgres://postgres:postgres@localhost:5432/commenttree?sslmode=disable
+server:
+  addr: :8080
