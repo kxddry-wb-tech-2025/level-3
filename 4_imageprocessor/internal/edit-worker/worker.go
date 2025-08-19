@@ -103,6 +103,10 @@ func (w *Worker) Handle(ctx context.Context, ch <-chan *domain.KafkaMessage) {
 				ContentType: file.ContentType,
 			}); err != nil {
 				zlog.Logger.Err(err).Str("op", op).Msg("failed to upload file")
+
+				if err := w.st.UpdateStatus(ctx, task.FileName, domain.StatusFailed); err != nil {
+					zlog.Logger.Err(err).Str("op", op).Msg("failed to update status to failed")
+				}
 				continue
 			}
 

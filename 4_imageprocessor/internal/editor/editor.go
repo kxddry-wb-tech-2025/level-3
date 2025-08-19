@@ -10,6 +10,7 @@ import (
 	"io"
 
 	"github.com/disintegration/imaging"
+	"github.com/kxddry/wbf/zlog"
 )
 
 // Editor is the main editor struct that contains the editor's methods.
@@ -104,6 +105,12 @@ func (e *Editor) AddWatermark(file *domain.File) error {
 	file.Data, err = e.encode(rgba, format[file.ContentType])
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	if rc, ok := file.Data.(*readSeekCloser); ok {
+		file.Size = rc.Size()
+	} else {
+		zlog.Logger.Error().Str("op", op).Msg("file.Data is not a *readSeekCloser")
 	}
 
 	return nil
