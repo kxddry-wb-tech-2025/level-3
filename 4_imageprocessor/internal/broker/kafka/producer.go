@@ -11,14 +11,18 @@ import (
 	"github.com/kxddry/wbf/retry"
 )
 
-type Broker struct {
+type Producer struct {
 	strat    retry.Strategy
 	producer *kafka.Producer
 }
 
-func NewBroker(brokers []string, topic string, strat retry.Strategy) *Broker {
-	producer := kafka.NewProducer(brokers, topic)
-	return &Broker{producer: producer, strat: strat}
+
+
+func NewProducer(brokers []string, topic string, strat retry.Strategy) *Producer {
+	return &Producer{
+		strat:    strat,
+		producer: kafka.NewProducer(brokers, topic),
+	}
 }
 
 type task struct {
@@ -26,14 +30,14 @@ type task struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (b *Broker) SendTask(ctx context.Context, t *domain.Task) error {
+func (p *Producer) SendTask(ctx context.Context, t *domain.Task) error {
 	const op = "broker.kafka.SendTask"
 	tt := task{t.FileName, t.CreatedAt}
 	data, err := json.Marshal(tt)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
-	if err := b.producer.SendWithRetry(ctx, b.strat, []byte(t.FileName), data); err != nil {
+	if err := p.producer.SendWithRetry(ctx, p.strat, []byte(t.FileName), data); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
