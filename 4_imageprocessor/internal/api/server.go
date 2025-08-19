@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/kxddry/wbf/ginext"
 )
 
@@ -19,7 +20,7 @@ type TaskSender interface {
 }
 
 type ImageGetter interface {
-	GetImage(id string) (*domain.Task, error)
+	GetImage(id string) (*domain.Image, error)
 }
 
 type ImageDeleter interface {
@@ -86,12 +87,35 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 
 func (s *Server) getImage() gin.HandlerFunc {
 	return func(c *ginext.Context) {
-		panic("not implemented")
+		id := c.Param("id")
+		if _, err := uuid.Parse(id); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		image, err := s.ig.GetImage(id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, image)
 	}
 }
 
 func (s *Server) deleteImage() gin.HandlerFunc {
 	return func(c *ginext.Context) {
-		panic("not implemented")
+		id := c.Param("id")
+		if _, err := uuid.Parse(id); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		if err := s.id.DeleteImage(id); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "success", "id": id})
 	}
 }
