@@ -3,8 +3,6 @@ package minio
 import (
 	"context"
 	"image-processor/internal/domain"
-	"mime"
-	"path/filepath"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -73,10 +71,16 @@ func (s *Storage) Get(ctx context.Context, fileName string) (*domain.File, error
 		return nil, err
 	}
 
+	objectInfo, err := object.Stat()
+	if err != nil {
+		return nil, err
+	}
+
 	return &domain.File{
 		Name:        fileName,
 		Data:        object,
-		ContentType: mime.TypeByExtension(filepath.Ext(fileName)),
+		ContentType: objectInfo.ContentType,
+		Size:        objectInfo.Size,
 	}, nil
 }
 
