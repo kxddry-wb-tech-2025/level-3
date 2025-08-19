@@ -7,44 +7,27 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/kxddry/wbf/ginext"
 )
 
-type FileStorage interface {
-	Upload(ctx context.Context, file domain.File) error
-}
-
-type TaskSender interface {
-	SendTask(task *domain.Task) error
-}
-
-type ImageGetter interface {
-	GetImage(id string) (*domain.Image, error)
-}
-
-type ImageDeleter interface {
-	DeleteImage(id string) error
+type Handler interface {
+	UploadImage(ctx context.Context, file *domain.File) error
+	GetImage(ctx context.Context, id string) (*domain.Image, error)
+	DeleteImage(ctx context.Context, id string) error
 }
 
 type Server struct {
-	r  *ginext.Engine
-	ig ImageGetter
-	id ImageDeleter
-	fs FileStorage
-	ts TaskSender
+	r *ginext.Engine
+	h Handler
 }
 
-func New(r *ginext.Engine, ig ImageGetter, id ImageDeleter, fs FileStorage, ts TaskSender) *Server {
+func New(r *ginext.Engine, h Handler) *Server {
 	return &Server{
-		r:  r,
-		ig: ig,
-		id: id,
-		fs: fs,
-		ts: ts,
+		r: r,
+		h: h,
 	}
 }
 
@@ -103,7 +86,7 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 		fileName := fmt.Sprintf("%s.%s", id, filepath.Ext(file.Filename))
 
 		// upload the file to the storage
-		if err = s.fs.Upload(c.Request.Context(), domain.File{
+		if err = s.h.UploadImage(c.Request.Context(), &domain.File{
 			Name:        fileName,
 			Data:        data,
 			Size:        file.Size,
@@ -113,19 +96,7 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 			return
 		}
 
-		// create a task to process the image
-		task := &domain.Task{
-			FileName:  fileName,
-			Status:    domain.StatusPending,
-			CreatedAt: time.Now(),
-		}
-
-		if err := s.ts.SendTask(task); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"id": id, "time": task.CreatedAt, "status": task.Status})
+		c.JSON(http.StatusOK, gin.H{"id": id})
 	}
 }
 
@@ -137,7 +108,7 @@ func (s *Server) getImage() gin.HandlerFunc {
 			return
 		}
 
-		image, err := s.ig.GetImage(id)
+		image, err := s.h.GetImage(c.Request.Context(), id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -155,7 +126,7 @@ func (s *Server) deleteImage() gin.HandlerFunc {
 			return
 		}
 
-		if err := s.id.DeleteImage(id); err != nil {
+		if err := s.h.DeleteImage(c.Request.Context(), id); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
