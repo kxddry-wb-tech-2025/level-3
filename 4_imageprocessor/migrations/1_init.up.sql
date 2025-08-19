@@ -2,6 +2,6 @@ CREATE TABLE IF NOT EXISTS images (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	ext VARCHAR(10) NOT NULL,
 	created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	new_id UUID DEFAULT NULL,
 	status VARCHAR(20) NOT NULL DEFAULT 'pending'
 );
-

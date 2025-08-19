@@ -2,12 +2,10 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"image-processor/internal/domain"
+	"image-processor/internal/helpers"
 	"image-processor/internal/storage"
-	"path/filepath"
 	"time"
 
 	"github.com/kxddry/wbf/dbpg"
@@ -17,6 +15,22 @@ import (
 // Storage is the main storage struct that contains the database connection.
 type Storage struct {
 	db *dbpg.DB
+}
+
+func (s *Storage) execAndCheck(ctx context.Context, query string, args ...any) error {
+
+	// I will not be using ExecWithRetry because its implementation is shit. If it gets sql.ErrNoRows, it retries.
+	// So instead, we'll use ExecContext and handle the error ourselves.
+	res, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return storage.ErrNotFound
+	}
+
+	return nil
 }
 
 func New(master string, slaves ...string) (*Storage, error) {
@@ -44,15 +58,9 @@ func (s *Storage) Close() error {
 func (s *Storage) AddFile(ctx context.Context, file *domain.File) error {
 	const op = "storage.postgres.AddFile"
 
-	id, ext := filepath.Split(file.Name)
+	id, ext := helpers.Split(file.Name)
 
-	// I will not be using ExecWithRetry because its implementation is shit. If it gets sql.ErrNoRows, it retries.
-	// So instead, we'll use ExecContext and handle the error ourselves.
-	_, err := s.db.ExecContext(ctx, "INSERT INTO images (id, ext, created_at, status) VALUES ($1, $2, $3, $4)", id, ext, time.Now(), domain.StatusPending)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("%s: %w", op, storage.ErrNotFound)
-		}
+	if err := s.execAndCheck(ctx, "INSERT INTO images (id, ext, created_at, status) VALUES ($1, $2, $3, $4)", id, ext, time.Now(), domain.StatusPending); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -62,14 +70,21 @@ func (s *Storage) AddFile(ctx context.Context, file *domain.File) error {
 func (s *Storage) UpdateStatus(ctx context.Context, fileName string, status string) error {
 	const op = "storage.postgres.UpdateStatus"
 
-	id, ext := filepath.Split(fileName)
+	id, ext := helpers.Split(fileName)
 
-	// Same goes here: ExecWithRetry is garbage, so we'll use ExecContext.
-	_, err := s.db.ExecContext(ctx, "UPDATE images SET status = $1 WHERE id = $2 AND ext = $3", status, id, ext)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("%s: %w", op, storage.ErrNotFound)
-		}
+	if err := s.execAndCheck(ctx, "UPDATE images SET status = $1 WHERE id = $2 AND ext = $3", status, id, ext); err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
+func (s *Storage) AddNewID(ctx context.Context, fileName string, newID string) error {
+	const op = "storage.postgres.AddNewID"
+
+	id, ext := helpers.Split(fileName)
+
+	if err := s.execAndCheck(ctx, "UPDATE images SET new_id = $1 WHERE id = $2 AND ext = $3", newID, id, ext); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -130,12 +145,7 @@ func (s *Storage) GetFileName(ctx context.Context, id string) (string, error) {
 func (s *Storage) DeleteFile(ctx context.Context, id string) error {
 	const op = "storage.postgres.DeleteFile"
 
-	_, err := s.db.ExecContext(ctx, "DELETE FROM images WHERE id = $1", id)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("%s: %w", op, storage.ErrNotFound)
-		}
-		zlog.Logger.Err(err).Msg("failed to delete file")
+	if err := s.execAndCheck(ctx, "DELETE FROM images WHERE id = $1", id); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
