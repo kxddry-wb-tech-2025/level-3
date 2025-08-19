@@ -2,7 +2,10 @@ package minio
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"image-processor/internal/domain"
+	"image-processor/internal/storage"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -27,21 +30,22 @@ type Storage struct {
 
 // New creates a new storage with the given endpoint, access key, and secret key.
 func New(ctx context.Context, cfg Config) (*Storage, error) {
+	const op = "storage.minio.New"
 	client, err := minio.New(cfg.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
 		Secure: cfg.SSL,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	exists, err := client.BucketExists(ctx, cfg.BucketName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	if !exists {
 		if err := client.MakeBucket(ctx, cfg.BucketName, minio.MakeBucketOptions{}); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 	}
 
@@ -49,31 +53,43 @@ func New(ctx context.Context, cfg Config) (*Storage, error) {
 }
 
 func (s *Storage) Upload(ctx context.Context, file *domain.File) error {
+	const op = "storage.minio.Upload"
 	_, err := s.client.PutObject(ctx, s.bucketName, file.Name, file.Data, file.Size, minio.PutObjectOptions{
 		ContentType: file.ContentType,
 	})
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
 
-	return err
+	return nil
 }
 
 func (s *Storage) GetURL(ctx context.Context, fileName string) (string, error) {
+	const op = "storage.minio.GetURL"
 	presignedURL, err := s.client.PresignedGetObject(ctx, s.bucketName, fileName, time.Hour*24, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	return presignedURL.String(), nil
 }
 
 func (s *Storage) Get(ctx context.Context, fileName string) (*domain.File, error) {
+	const op = "storage.minio.Get"
 	object, err := s.client.GetObject(ctx, s.bucketName, fileName, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, err
+		var errResp minio.ErrorResponse
+		if errors.As(err, &errResp) {
+			if errResp.Code == "NoSuchKey" {
+				return nil, fmt.Errorf("%s: %w", op, storage.ErrNotFound)
+			}
+		}
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	objectInfo, err := object.Stat()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return &domain.File{
@@ -85,5 +101,11 @@ func (s *Storage) Get(ctx context.Context, fileName string) (*domain.File, error
 }
 
 func (s *Storage) Delete(ctx context.Context, fileName string) error {
-	return s.client.RemoveObject(ctx, s.bucketName, fileName, minio.RemoveObjectOptions{})
+	const op = "storage.minio.Delete"
+	err := s.client.RemoveObject(ctx, s.bucketName, fileName, minio.RemoveObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
 }
