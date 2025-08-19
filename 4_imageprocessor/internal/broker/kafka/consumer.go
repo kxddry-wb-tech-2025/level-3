@@ -21,11 +21,21 @@ type Consumer struct {
 }
 
 // NewConsumer creates a new consumer with the given brokers, topic, groupID, and strategy.
-func NewConsumer(brokers []string, topic, groupID string, strat retry.Strategy) *Consumer {
-	return &Consumer{
+func NewConsumer(brokers []string, topic, groupID string, strat retry.Strategy, timeout time.Duration) (*Consumer, error) {
+	const op = "broker.kafka.NewConsumer"
+
+	cons := kafka.NewConsumer(brokers, topic, groupID)
+
+	consumer := &Consumer{
 		strat:    strat,
-		consumer: kafka.NewConsumer(brokers, topic, groupID),
+		consumer: cons,
 	}
+
+	if err := consumer.CheckHealth(timeout); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return consumer, nil
 }
 
 // StartConsuming starts consuming messages from the Kafka topic.
@@ -39,6 +49,12 @@ func (c *Consumer) StartConsuming(ctx context.Context, out chan<- *domain.KafkaM
 			case <-ctx.Done():
 				return
 			case msg, ok := <-in:
+				// ignore healthcheck messages
+				if string(msg.Key) == healthcheckKey {
+					c.consumer.Commit(ctx, msg)
+					continue
+				}
+
 				if !ok {
 					return
 				}
