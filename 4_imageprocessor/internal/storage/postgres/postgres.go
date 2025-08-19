@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"image-processor/internal/domain"
 	"image-processor/internal/helpers"
@@ -128,7 +129,7 @@ func (s *Storage) GetFileName(ctx context.Context, id string) (string, error) {
 	const op = "storage.postgres.GetFileName"
 
 	var ext string
-	rows, err := s.db.QueryContext(ctx, "SELECT ext FROM images WHERE id = $1", id)
+	rows, err := s.db.QueryContext(ctx, "SELECT ext, new_id FROM images WHERE id = $1", id)
 	if err != nil {
 		zlog.Logger.Err(err).Msg("failed to get file name")
 		return "", fmt.Errorf("%s: %w", op, err)
@@ -140,13 +141,21 @@ func (s *Storage) GetFileName(ctx context.Context, id string) (string, error) {
 		return "", fmt.Errorf("%s: %w", op, storage.ErrNotFound)
 	}
 
-	err = rows.Scan(&ext)
+	var newID sql.NullString
+
+	err = rows.Scan(&ext, &newID)
 	if err != nil {
 		zlog.Logger.Err(err).Msg("failed to scan file name")
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
+	// if the new ID is valid, use it
+	if newID.Valid {
+		id = newID.String
+	}
+
 	return id + "." + ext, nil
+
 }
 
 // DeleteFile deletes a file from the postgres storage.

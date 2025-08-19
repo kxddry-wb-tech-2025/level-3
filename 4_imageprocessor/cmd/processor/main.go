@@ -40,11 +40,11 @@ func main() {
 
 	prod := kafka.NewProducer([]string{cfg.GetString("kafka.brokers")}, "uploaded", strat)
 	s3, err := minio.New(ctx, minio.Config{
-		Endpoint:   cfg.GetString("minio.endpoint"),
+		Endpoint:   cfg.GetString("s3.endpoint"),
 		AccessKey:  os.Getenv("S3_ACCESS_KEY"),
 		SecretKey:  os.Getenv("S3_SECRET_KEY"),
-		BucketName: cfg.GetString("minio.bucket"),
-		BaseURL:    cfg.GetString("minio.base_url"),
+		BucketName: cfg.GetString("s3.bucket"),
+		BaseURL:    cfg.GetString("s3.base_url"),
 		SSL:        false, // not for production
 	})
 	if err != nil {
