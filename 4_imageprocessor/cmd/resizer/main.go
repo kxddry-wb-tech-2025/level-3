@@ -60,15 +60,17 @@ func main() {
 	ch := make(chan *domain.KafkaMessage)
 	cons.StartConsuming(ctx, ch)
 
+	worker := editworker.NewWorker(editor.NewEditor(), st, s3)
+	zlog.Logger.Info().Msg("starting worker")
+	go worker.Handle(ctx, ch)
+
 	shutdownCh := make(chan os.Signal, 1)
 	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
 	<-shutdownCh
-
-	worker := editworker.NewWorker(editor.NewEditor(), st, s3)
-	go worker.Handle(ctx, ch)
 
 	if err := st.Close(); err != nil {
 		zlog.Logger.Err(err).Msg("failed to close postgres client")
 	}
 	_ = cons.Close()
+
 }
