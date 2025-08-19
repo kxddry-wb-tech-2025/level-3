@@ -1,6 +1,8 @@
 package api
 
 import (
+	"errors"
+	"image-processor/internal/storage"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +21,10 @@ func (s *Server) getImage() gin.HandlerFunc {
 
 		image, err := s.h.GetImage(c.Request.Context(), id)
 		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "image not found"})
+				return
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
