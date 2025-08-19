@@ -14,7 +14,7 @@ import (
 	"github.com/kxddry/wbf/ginext"
 )
 
-type Storage interface {
+type FileStorage interface {
 	Upload(ctx context.Context, file domain.File) error
 }
 
@@ -34,16 +34,16 @@ type Server struct {
 	r  *ginext.Engine
 	ig ImageGetter
 	id ImageDeleter
-	st Storage
+	fs FileStorage
 	ts TaskSender
 }
 
-func New(r *ginext.Engine, ig ImageGetter, id ImageDeleter, st Storage, ts TaskSender) *Server {
+func New(r *ginext.Engine, ig ImageGetter, id ImageDeleter, fs FileStorage, ts TaskSender) *Server {
 	return &Server{
 		r:  r,
 		ig: ig,
 		id: id,
-		st: st,
+		fs: fs,
 		ts: ts,
 	}
 }
@@ -103,18 +103,17 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 		fileName := fmt.Sprintf("%s.%s", id, filepath.Ext(file.Filename))
 
 		// upload the file to the storage
-		err = s.st.Upload(c.Request.Context(), domain.File{
+		if err = s.fs.Upload(c.Request.Context(), domain.File{
 			Name:        fileName,
 			Data:        data,
 			Size:        file.Size,
 			ContentType: contentType,
-		})
-
-		if err != nil {
+		}); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
+		// create a task to process the image
 		task := &domain.Task{
 			FileName:  fileName,
 			Status:    domain.StatusPending,
