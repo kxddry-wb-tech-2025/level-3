@@ -30,7 +30,8 @@ type Image struct {
 }
 
 type File struct {
-	Data       io.ReadSeekCloser
-	Size       int64
+	Name        string
+	Data        io.ReadSeekCloser
+	Size        int64
 	ContentType string
 }

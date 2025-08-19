@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"image-processor/internal/domain"
+	"mime"
 	"path/filepath"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -51,26 +51,42 @@ func New(ctx context.Context, cfg Config) (*Storage, error) {
 	return &Storage{client: client, bucketName: cfg.BucketName, baseURL: cfg.BaseURL}, nil
 }
 
-func (s *Storage) Upload(ctx context.Context, file domain.File) (string, error) {
-	id := uuid.New().String()
-
-	fileName := fmt.Sprintf("%s.%s", id, filepath.Ext(file.ContentType))
+func (s *Storage) Upload(ctx context.Context, file *domain.File) (string, error) {
+	fileName := fmt.Sprintf("%s.%s", file.Name, filepath.Ext(file.ContentType))
 
 	_, err := s.client.PutObject(ctx, s.bucketName, fileName, file.Data, file.Size, minio.PutObjectOptions{
 		ContentType: file.ContentType,
 	})
+
 	if err != nil {
 		return "", err
 	}
 
-	return id, nil
+	return fileName, nil
 }
 
-func (s *Storage) GetURL(ctx context.Context, id string) (string, error) {
-	presignedURL, err := s.client.PresignedGetObject(ctx, s.bucketName, id, time.Hour*24, nil)
+func (s *Storage) GetURL(ctx context.Context, fileName string) (string, error) {
+	presignedURL, err := s.client.PresignedGetObject(ctx, s.bucketName, fileName, time.Hour*24, nil)
 	if err != nil {
 		return "", err
 	}
 
 	return presignedURL.String(), nil
+}
+
+func (s *Storage) Get(ctx context.Context, fileName string) (*domain.File, error) {
+	object, err := s.client.GetObject(ctx, s.bucketName, fileName, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.File{
+		Name:        fileName,
+		Data:        object,
+		ContentType: mime.TypeByExtension(filepath.Ext(fileName)),
+	}, nil
+}
+
+func (s *Storage) Delete(ctx context.Context, fileName string) error {
+	return s.client.RemoveObject(ctx, s.bucketName, fileName, minio.RemoveObjectOptions{})
 }
