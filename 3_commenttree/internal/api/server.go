@@ -16,6 +16,7 @@ import (
 	"github.com/kxddry/wbf/ginext"
 )
 
+// Storage is the interface that wraps the basic methods for storing and retrieving comments.
 type Storage interface {
 	AddComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
 	GetComments(ctx context.Context, parentID string, asc bool, limit, offset int) (*domain.CommentTree, error)
@@ -23,11 +24,13 @@ type Storage interface {
 	SearchComments(ctx context.Context, query string, limit, offset int) ([]domain.Comment, error)
 }
 
+// Server is the main server struct that contains the engine and the storage.
 type Server struct {
 	r  *ginext.Engine
 	st Storage
 }
 
+// New creates a new server with the given storage.
 func New(st Storage) *Server {
 	r := ginext.New()
 
@@ -39,6 +42,7 @@ func New(st Storage) *Server {
 	return s
 }
 
+// setMiddlewares sets the middlewares for the server.
 func (s *Server) setMiddlewares() {
 	s.r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
@@ -49,6 +53,7 @@ func (s *Server) setMiddlewares() {
 	s.r.Use(gin.Recovery())
 }
 
+// setRoutes sets the routes for the server.
 func (s *Server) setRoutes() {
 	s.r.POST("/comments", s.postComment())
 	s.r.GET("/comments", s.getComment())
@@ -57,6 +62,7 @@ func (s *Server) setRoutes() {
 	s.r.StaticFile("/", "./static/index.html")
 }
 
+// getComment is the handler for the GET /comments route.
 func (s *Server) getComment() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		parentID := c.Query("parent")
@@ -100,6 +106,7 @@ func (s *Server) getComment() gin.HandlerFunc {
 	}
 }
 
+// Run runs the server on the given addresses.
 func (s *Server) Run(addrs ...string) error {
 	if len(addrs) == 0 || addrs[0] == "" {
 		addrs = []string{"0.0.0.0:8080"}
@@ -107,6 +114,7 @@ func (s *Server) Run(addrs ...string) error {
 	return s.r.Run(addrs...)
 }
 
+// postComment is the handler for the POST /comments route.
 func (s *Server) postComment() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		var req domain.AddCommentRequest
@@ -136,6 +144,7 @@ func (s *Server) postComment() gin.HandlerFunc {
 	}
 }
 
+// deleteComment is the handler for the DELETE /comments/:id route.
 func (s *Server) deleteComment() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		id := c.Param("id")
@@ -153,6 +162,7 @@ func (s *Server) deleteComment() gin.HandlerFunc {
 	}
 }
 
+// searchComments is the handler for the GET /comments/search route.
 func (s *Server) searchComments() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		query := c.Query("q")
