@@ -56,7 +56,11 @@ func main() {
 	}
 
 	// nothing better to do with this SHITTY AHH config package
-	cons := kafka.NewConsumer([]string{cfg.GetString("kafka.brokers")}, "uploaded", "resizer", strat)
+	cons, err := kafka.NewConsumer([]string{cfg.GetString("kafka.brokers")}, "uploaded", "resizer", strat, 3*time.Second)
+	if err != nil {
+		zlog.Logger.Fatal().Err(err).Msg("failed to create kafka consumer")
+	}
+
 	ch := make(chan *domain.KafkaMessage)
 	cons.StartConsuming(ctx, ch)
 

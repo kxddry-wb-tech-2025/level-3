@@ -12,6 +12,10 @@ import (
 	kafka_go "github.com/segmentio/kafka-go"
 )
 
+const (
+	healthcheckKey = "healthcheck"
+)
+
 // Producer is the struct that contains the producer and the strategy.
 type Producer struct {
 	strat    retry.Strategy
@@ -42,7 +46,7 @@ func (p *Producer) CheckHealth(timeout time.Duration) error {
 	defer cancel()
 
 	testMsg := kafka_go.Message{
-		Key:   []byte("healthcheck"),
+		Key:   []byte(healthcheckKey),
 		Value: []byte("ping"),
 	}
 	return p.producer.Writer.WriteMessages(ctx, testMsg)
