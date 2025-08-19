@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            margin-bottom: 40px;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e8f2ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .upload-hint {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .status-section {
+            margin-bottom: 40px;
+        }
+
+        .status-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-input input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .status-input input:focus {
+            border-color: #667eea;
+        }
+
+        .status-result {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .status-result.show {
+            display: block;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-running {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .progress {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .status-input {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖼️ Image Processor</h1>
+            <p>Upload, process, and manage your images with ease</p>
+        </div>
+
+        <div class="content">
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <h2>Upload Image</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Drag and drop your image here</div>
+                    <div class="upload-hint">or click to browse (JPEG, PNG up to 20MB)</div>
+                    <input type="file" id="fileInput" accept="image/jpeg,image/png">
+                </div>
+                <div style="text-align: center;">
+                    <button class="btn" id="uploadBtn" disabled>Upload Image</button>
+                </div>
+                <div class="progress" id="progressBar" style="display: none;">
+                    <div class="progress-bar" id="progressBarFill"></div>
+                </div>
+            </div>
+
+            <!-- Status Check Section -->
+            <div class="status-section">
+                <h2>Check Image Status</h2>
+                <div class="status-input">
+                    <input type="text" id="imageId" placeholder="Enter image ID">
+                    <button class="btn" id="checkBtn">Check Status</button>
+                </div>
+                <div class="status-result" id="statusResult">
+                    <div id="statusContent"></div>
+                </div>
+            </div>
+
+            <!-- Alerts -->
+            <div class="alert" id="alert"></div>
+        </div>
+    </div>
+
+    <script>
+        class ImageProcessor {
+            constructor() {
+                this.uploadArea = document.getElementById('uploadArea');
+                this.fileInput = document.getElementById('fileInput');
+                this.uploadBtn = document.getElementById('uploadBtn');
+                this.progressBar = document.getElementById('progressBar');
+                this.progressBarFill = document.getElementById('progressBarFill');
+                this.imageId = document.getElementById('imageId');
+                this.checkBtn = document.getElementById('checkBtn');
+                this.statusResult = document.getElementById('statusResult');
+                this.statusContent = document.getElementById('statusContent');
+                this.alert = document.getElementById('alert');
+
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Upload area events
+                this.uploadArea.addEventListener('click', () => this.fileInput.click());
+                this.uploadArea.addEventListener('dragover', (e) => this.handleDragOver(e));
+                this.uploadArea.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                this.uploadArea.addEventListener('drop', (e) => this.handleDrop(e));
+                this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+
+                // Button events
+                this.uploadBtn.addEventListener('click', () => this.uploadImage());
+                this.checkBtn.addEventListener('click', () => this.checkStatus());
+
+                // Enter key for status check
+                this.imageId.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.checkStatus();
+                    }
+                });
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                this.uploadArea.classList.add('dragover');
+            }
+
+            handleDragLeave(e) {
+                e.preventDefault();
+                this.uploadArea.classList.remove('dragover');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                this.uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.fileInput.files = files;
+                    this.handleFileSelect({ target: this.fileInput });
+                }
+            }
+
+            handleFileSelect(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    this.uploadBtn.disabled = false;
+                    this.showAlert(`Selected: ${file.name}`, 'success');
+                }
+            }
+
+            async uploadImage() {
+                const file = this.fileInput.files[0];
+                if (!file) {
+                    this.showAlert('Please select a file first', 'error');
+                    return;
+                }
+
+                // Validate file size (20MB)
+                if (file.size > 20 * 1024 * 1024) {
+                    this.showAlert('File size must be less than 20MB', 'error');
+                    return;
+                }
+
+                // Validate file type
+                if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                    this.showAlert('Please select a JPEG or PNG image', 'error');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                this.uploadBtn.disabled = true;
+                this.progressBar.style.display = 'block';
+                this.progressBarFill.style.width = '0%';
+
+                try {
+                    // Simulate progress
+                    const progressInterval = setInterval(() => {
+                        const currentWidth = parseInt(this.progressBarFill.style.width) || 0;
+                        if (currentWidth < 90) {
+                            this.progressBarFill.style.width = (currentWidth + 10) + '%';
+                        }
+                    }, 200);
+
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    clearInterval(progressInterval);
+                    this.progressBarFill.style.width = '100%';
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        this.showAlert(`Image uploaded successfully! ID: ${result.id}`, 'success');
+                        this.imageId.value = result.id;
+                        this.fileInput.value = '';
+                        this.uploadBtn.disabled = true;
+                    } else {
+                        const error = await response.json();
+                        this.showAlert(`Upload failed: ${error.error}`, 'error');
+                    }
+                } catch (error) {
+                    this.showAlert(`Upload failed: ${error.message}`, 'error');
+                } finally {
+                    setTimeout(() => {
+                        this.progressBar.style.display = 'none';
+                        this.uploadBtn.disabled = false;
+                    }, 1000);
+                }
+            }
+
+            async checkStatus() {
+                const id = this.imageId.value.trim();
+                if (!id) {
+                    this.showAlert('Please enter an image ID', 'error');
+                    return;
+                }
+
+                this.checkBtn.disabled = true;
+
+                try {
+                    const response = await fetch(`/image/${id}`);
+                    
+                    if (response.ok) {
+                        const image = await response.json();
+                        this.displayStatus(image);
+                    } else if (response.status === 404) {
+                        this.showAlert('Image not found', 'error');
+                        this.statusResult.classList.remove('show');
+                    } else {
+                        const error = await response.json();
+                        this.showAlert(`Error: ${error.error}`, 'error');
+                    }
+                } catch (error) {
+                    this.showAlert(`Error: ${error.message}`, 'error');
+                } finally {
+                    this.checkBtn.disabled = false;
+                }
+            }
+
+            displayStatus(image) {
+                const statusClass = `status-${image.status}`;
+                const statusText = image.status.charAt(0).toUpperCase() + image.status.slice(1);
+                
+                let content = `
+                    <div class="status-badge ${statusClass}">${statusText}</div>
+                `;
+
+                if (image.status === 'completed' && image.url) {
+                    content += `
+                        <p><strong>Image URL:</strong> <a href="${image.url}" target="_blank">${image.url}</a></p>
+                        <img src="${image.url}" alt="Processed image" class="image-preview">
+                        <br><br>
+                        <button class="btn btn-danger" onclick="imageProcessor.deleteImage('${this.imageId.value}')">Delete Image</button>
+                    `;
+                } else if (image.status === 'failed') {
+                    content += '<p>Image processing failed. Please try uploading again.</p>';
+                } else {
+                    content += '<p>Image is being processed. Please check back later.</p>';
+                }
+
+                this.statusContent.innerHTML = content;
+                this.statusResult.classList.add('show');
+            }
+
+            async deleteImage(id) {
+                if (!confirm('Are you sure you want to delete this image?')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/image/${id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        this.showAlert('Image deleted successfully', 'success');
+                        this.statusResult.classList.remove('show');
+                        this.imageId.value = '';
+                    } else {
+                        const error = await response.json();
+                        this.showAlert(`Delete failed: ${error.error}`, 'error');
+                    }
+                } catch (error) {
+                    this.showAlert(`Delete failed: ${error.message}`, 'error');
+                }
+            }
+
+            showAlert(message, type) {
+                this.alert.textContent = message;
+                this.alert.className = `alert alert-${type} show`;
+                
+                setTimeout(() => {
+                    this.alert.classList.remove('show');
+                }, 5000);
+            }
+        }
+
+        // Initialize the application
+        const imageProcessor = new ImageProcessor();
+    </script>
+</body>
+</html>
