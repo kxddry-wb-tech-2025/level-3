@@ -10,6 +10,7 @@ import (
 	"image-processor/internal/storage/postgres"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -56,7 +57,7 @@ func main() {
 	}
 
 	// nothing better to do with this SHITTY AHH config package
-	cons, err := kafka.NewConsumer([]string{cfg.GetString("kafka.brokers")}, "uploaded", "resizer", strat, 3*time.Second)
+	cons, err := kafka.NewConsumer([]string{cfg.GetString("kafka.brokers")}, "uploaded", "editor", strat, 3*time.Second)
 	if err != nil {
 		zlog.Logger.Fatal().Err(err).Msg("failed to create kafka consumer")
 	}
@@ -64,7 +65,19 @@ func main() {
 	ch := make(chan *domain.KafkaMessage)
 	cons.StartConsuming(ctx, ch)
 
-	worker := editworker.NewWorker(editor.NewEditor(), st, s3)
+	marginStr := cfg.GetString("editor.margin")
+	var margin int
+	if n, err := strconv.Atoi(marginStr); err != nil {
+		margin = 20
+	} else {
+		margin = n
+	}
+	edit, err := editor.NewEditor(cfg.GetString("editor.watermark"), margin)
+	if err != nil {
+		zlog.Logger.Fatal().Err(err).Msg("failed to create editor")
+	}
+
+	worker := editworker.NewWorker(edit, st, s3)
 	zlog.Logger.Info().Msg("starting worker")
 	go worker.Handle(ctx, ch)
 
