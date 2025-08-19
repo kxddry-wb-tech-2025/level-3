@@ -12,3 +12,6 @@ postgres:
 
 server:
   addr: 0.0.0.0:8080
+
+editor:
+  watermark: ./static/watermark.png
