@@ -40,4 +40,5 @@ func (s *Server) registerRoutes() {
 	s.r.POST("/upload", s.uploadImage())
 	s.r.GET("/image/:id", s.getImage())
 	s.r.DELETE("/image/:id", s.deleteImage())
+	s.r.StaticFile("/", "./static/index.html")
 }
