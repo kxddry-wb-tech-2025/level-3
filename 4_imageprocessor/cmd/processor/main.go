@@ -17,8 +17,4 @@ func main() {
 	if err := cfg.Load("config.yaml"); err != nil {
 		zlog.Logger.Warn().Err(err).Msg("failed to load config with config.yaml")
 	}
-
-	
-
-	
 }
