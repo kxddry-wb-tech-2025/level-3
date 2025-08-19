@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"image-processor/internal/domain"
 	"mime/multipart"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 )
 
 type Storage interface {
-	Upload(file *multipart.FileHeader) (string, error)
+	Upload(ctx context.Context, file *multipart.FileHeader) (string, error)
 }
 
 type TaskSender interface {
@@ -64,7 +65,7 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 			return
 		}
 
-		uuid, err := s.st.Upload(file)
+		uuid, err := s.st.Upload(c.Request.Context(), file)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
