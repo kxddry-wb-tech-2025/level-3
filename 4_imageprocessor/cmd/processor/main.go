@@ -38,7 +38,11 @@ func main() {
 		zlog.Logger.Warn().Err(err).Msg("failed to load config with config.yaml")
 	}
 
-	prod := kafka.NewProducer([]string{cfg.GetString("kafka.brokers")}, "uploaded", strat)
+	prod, err := kafka.NewProducer([]string{cfg.GetString("kafka.brokers")}, "uploaded", strat, 3*time.Second)
+	if err != nil {
+		zlog.Logger.Fatal().Err(err).Msg("failed to create kafka producer")
+	}
+
 	s3, err := minio.New(ctx, minio.Config{
 		Endpoint:   cfg.GetString("s3.endpoint"),
 		AccessKey:  os.Getenv("S3_ACCESS_KEY"),

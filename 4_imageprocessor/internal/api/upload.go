@@ -54,7 +54,7 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 		}
 
 		id := uuid.New().String()
-		fileName := fmt.Sprintf("%s.%s", id, filepath.Ext(file.Filename))
+		fileName := fmt.Sprintf("%s%s", id, filepath.Ext(file.Filename))
 
 		// upload the file to the storage
 		if err = s.h.UploadImage(c.Request.Context(), &domain.File{

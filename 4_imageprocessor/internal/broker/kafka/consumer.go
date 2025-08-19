@@ -3,7 +3,10 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"image-processor/internal/domain"
+	"time"
 
 	"github.com/kxddry/wbf/kafka"
 	"github.com/kxddry/wbf/retry"
@@ -63,6 +66,21 @@ func (c *Consumer) StartConsuming(ctx context.Context, out chan<- *domain.KafkaM
 	}()
 
 	c.consumer.StartConsuming(ctx, in, c.strat)
+}
+
+// CheckHealth checks if the consumer is healthy.
+func (c *Consumer) CheckHealth(timeout time.Duration) error {
+	const op = "broker.kafka.Consumer.CheckHealth"
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	_, err := c.consumer.Fetch(ctx)
+	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
 }
 
 // Close closes the consumer.
