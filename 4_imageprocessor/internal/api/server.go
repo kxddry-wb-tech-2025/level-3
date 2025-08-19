@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"image-processor/internal/domain"
-	"mime/multipart"
+	"io"
 	"net/http"
 	"time"
 
@@ -13,7 +13,7 @@ import (
 )
 
 type Storage interface {
-	Upload(ctx context.Context, file *multipart.FileHeader) (string, error)
+	Upload(ctx context.Context, file domain.File) (string, error)
 }
 
 type TaskSender interface {
@@ -65,7 +65,45 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 			return
 		}
 
-		uuid, err := s.st.Upload(c.Request.Context(), file)
+		// check for 20MB limit
+		if file.Size > 20*1024*1024 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "file size is too large"})
+			return
+		}
+
+		data, err := file.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer data.Close()
+
+		buf := make([]byte, 512)
+		if _, err := data.Read(buf); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// check for valid image type
+		contentType := http.DetectContentType(buf)
+		if contentType != "image/jpeg" && contentType != "image/png" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid file type"})
+			return
+		}
+
+		// reset the file pointer to the beginning
+		if _, err := data.Seek(0, io.SeekStart); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// upload the file to the storage
+		uuid, err := s.st.Upload(c.Request.Context(), domain.File{
+			Data:        data,
+			Size:        file.Size,
+			ContentType: contentType,
+		})
+		
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
