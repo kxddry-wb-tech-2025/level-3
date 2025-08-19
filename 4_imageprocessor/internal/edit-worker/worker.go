@@ -40,16 +40,17 @@ func NewWorker(editor Editor, st Storage, fs FileStorage) *Worker {
 }
 
 // Handle starts the worker.
-func (w *Worker) Handle(ctx context.Context, ch <-chan *domain.Task) {
+func (w *Worker) Handle(ctx context.Context, ch <-chan *domain.KafkaMessage) {
 	const op = "editworker.Handle"
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case task, ok := <-ch:
+		case km, ok := <-ch:
 			if !ok {
 				return
 			}
+			task := km.Task
 			status, err := w.st.GetStatus(ctx, task.FileName)
 			if err != nil {
 				zlog.Logger.Err(err).Str("op", op).Msg("failed to get status")
@@ -73,6 +74,11 @@ func (w *Worker) Handle(ctx context.Context, ch <-chan *domain.Task) {
 			// only resize for now
 			if err := w.editor.Resize(ctx, file); err != nil {
 				zlog.Logger.Err(err).Str("op", op).Msg("failed to resize file")
+
+				// the file is probably corrupted, so we won't try resizing it again
+				if err := km.Commit(); err != nil {
+					zlog.Logger.Err(err).Str("op", op).Msg("failed to commit")
+				}
 
 				// update status to failed
 				if err := w.st.UpdateStatus(ctx, task.FileName, domain.StatusFailed); err != nil {
@@ -100,6 +106,10 @@ func (w *Worker) Handle(ctx context.Context, ch <-chan *domain.Task) {
 
 			if err := w.st.UpdateStatus(ctx, task.FileName, domain.StatusCompleted); err != nil {
 				zlog.Logger.Err(err).Str("op", op).Msg("failed to update status to completed")
+			}
+
+			if err := km.Commit(); err != nil {
+				zlog.Logger.Err(err).Str("op", op).Msg("failed to commit")
 			}
 		}
 	}

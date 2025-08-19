@@ -36,3 +36,9 @@ type File struct {
 	Size        int64
 	ContentType string
 }
+
+// KafkaMessage is the main kafka message struct that contains the task and the commit function.
+type KafkaMessage struct {
+	Task   Task `json:"task"`
+	Commit func() error
+}

@@ -13,12 +13,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/kxddry/wbf/config"
 	"github.com/kxddry/wbf/retry"
 	"github.com/kxddry/wbf/zlog"
 )
 
 func main() {
+	godotenv.Load()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	zlog.Init()
@@ -44,8 +46,8 @@ func main() {
 
 	s3, err := minio.New(ctx, minio.Config{
 		Endpoint:   cfg.GetString("s3.endpoint"),
-		AccessKey:  cfg.GetString("s3.accessKey"),
-		SecretKey:  cfg.GetString("s3.secretKey"),
+		AccessKey:  os.Getenv("S3_ACCESS_KEY"),
+		SecretKey:  os.Getenv("S3_SECRET_KEY"),
 		BucketName: cfg.GetString("s3.bucket"),
 	})
 
@@ -53,8 +55,9 @@ func main() {
 		zlog.Logger.Fatal().Err(err).Msg("failed to create s3 client")
 	}
 
+	// nothing better to do with this SHITTY AHH config package
 	cons := kafka.NewConsumer([]string{cfg.GetString("kafka.brokers")}, "uploaded", "resizer", strat)
-	ch := make(chan *domain.Task)
+	ch := make(chan *domain.KafkaMessage)
 	cons.StartConsuming(ctx, ch)
 
 	shutdownCh := make(chan os.Signal, 1)
