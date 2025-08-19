@@ -54,3 +54,7 @@ func (c *Consumer) StartConsuming(ctx context.Context, out chan<- *domain.Task) 
 
 	c.consumer.StartConsuming(ctx, in, c.strat)
 }
+
+func (c *Consumer) Close() error {
+	return c.consumer.Close()
+}

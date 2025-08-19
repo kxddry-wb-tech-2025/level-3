@@ -34,6 +34,13 @@ func New(master string, slaves ...string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
+func (s *Storage) Close() error {
+	for _, s := range s.db.Slaves {
+		_ = s.Close()
+	}
+	return s.db.Master.Close()
+}
+
 func (s *Storage) AddFile(ctx context.Context, file *domain.File) error {
 	const op = "storage.postgres.AddFile"
 

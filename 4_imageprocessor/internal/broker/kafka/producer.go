@@ -16,8 +16,6 @@ type Producer struct {
 	producer *kafka.Producer
 }
 
-
-
 func NewProducer(brokers []string, topic string, strat retry.Strategy) *Producer {
 	return &Producer{
 		strat:    strat,
@@ -42,4 +40,8 @@ func (p *Producer) SendTask(ctx context.Context, t *domain.Task) error {
 	}
 
 	return nil
+}
+
+func (p *Producer) Close() error {
+	return p.producer.Close()
 }
