@@ -1,0 +1,18 @@
+s3:
+  endpoint: minio:9000
+  bucket: images
+  base_url: http://minio:9000
+  ssl: false
+
+kafka:
+  brokers: kafka:9092
+
+postgres:
+  masterdsn: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/imageprocessor?sslmode=disable
+
+server:
+  addr: 0.0.0.0:8080
+
+editor:
+  watermark: ./static/watermark.png
+  margin: 20
