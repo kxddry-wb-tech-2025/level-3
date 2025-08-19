@@ -1,16 +1,19 @@
 package domain
 
-import "time"
+import (
+	"io"
+	"time"
+)
 
 const (
-	// StatusPending is the status that is returned when the task is pending.	
-	StatusPending   = "pending"
+	// StatusPending is the status that is returned when the task is pending.
+	StatusPending = "pending"
 	// StatusRunning is the status that is returned when the task is running.
 	StatusRunning = "running"
 	// StatusCompleted is the status that is returned when the task is completed.
 	StatusCompleted = "completed"
 	// StatusFailed is the status that is returned when the task failed.
-	StatusFailed    = "failed"
+	StatusFailed = "failed"
 )
 
 // Task is the main task struct that contains the task's id, status, and creation time.
@@ -24,4 +27,10 @@ type Task struct {
 type Image struct {
 	URL    string `json:"url,omitempty"`
 	Status string `json:"status"`
+}
+
+type File struct {
+	Data       io.ReadSeekCloser
+	Size       int64
+	ContentType string
 }
