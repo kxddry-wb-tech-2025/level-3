@@ -11,14 +11,17 @@ import (
 	"github.com/kxddry/wbf/dbpg"
 )
 
+// Storage is the main storage struct that contains the database connection.
 type Storage struct {
 	db *dbpg.DB
 }
 
+// New creates a new storage with the given database connection.
 func New(db *dbpg.DB) *Storage {
 	return &Storage{db: db}
 }
 
+// AddComment adds a new comment to the database.
 func (s *Storage) AddComment(ctx context.Context, comment domain.Comment) (domain.Comment, error) {
 	query := `
 		INSERT INTO comments (content, parent_id, created_at)
@@ -50,6 +53,7 @@ func (s *Storage) AddComment(ctx context.Context, comment domain.Comment) (domai
 	return comment, nil
 }
 
+// GetComments retrieves comments from the database.
 func (s *Storage) GetComments(ctx context.Context, parentID string, asc bool, limit, offset int) (*domain.CommentTree, error) {
 	order := "ASC"
 	if !asc {
@@ -135,6 +139,7 @@ func (s *Storage) GetComments(ctx context.Context, parentID string, asc bool, li
 	return rootComment, nil
 }
 
+// SearchComments searches for comments in the database.
 func (s *Storage) SearchComments(ctx context.Context, q string, limit, offset int) ([]domain.Comment, error) {
 	query := `
 		SELECT id, content, parent_id, created_at
@@ -166,6 +171,7 @@ func (s *Storage) SearchComments(ctx context.Context, q string, limit, offset in
 	return out, nil
 }
 
+// DeleteComments deletes a comment from the database.
 func (s *Storage) DeleteComments(ctx context.Context, id string) error {
 	query := `
 		DELETE FROM comments
@@ -182,6 +188,7 @@ func (s *Storage) DeleteComments(ctx context.Context, id string) error {
 	return nil
 }
 
+// Close closes the database connection.
 func (s *Storage) Close() error {
 	for _, conn := range s.db.Slaves {
 		_ = conn.Close()
