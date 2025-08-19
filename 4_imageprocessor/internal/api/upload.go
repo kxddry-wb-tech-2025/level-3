@@ -1,8 +1,10 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"image-processor/internal/domain"
+	"image-processor/internal/storage"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -63,6 +65,11 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 			Size:        file.Size,
 			ContentType: contentType,
 		}); err != nil {
+			// im too lazy to create erralreadyexists
+			if errors.Is(err, storage.ErrNotFound) {
+				c.JSON(http.StatusConflict, gin.H{"error": "image with the same uuid already exists which is crazy, try again"})
+				return
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
