@@ -12,12 +12,17 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/kxddry/wbf/config"
 	"github.com/kxddry/wbf/retry"
 	"github.com/kxddry/wbf/zlog"
 )
 
 func main() {
+	godotenv.Load()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	zlog.Init()
 	cfg := config.New()
 	strat := retry.Strategy{
@@ -34,11 +39,13 @@ func main() {
 	}
 
 	prod := kafka.NewProducer([]string{cfg.GetString("kafka.brokers")}, "uploaded", strat)
-	s3, err := minio.New(context.Background(), minio.Config{
+	s3, err := minio.New(ctx, minio.Config{
 		Endpoint:   cfg.GetString("minio.endpoint"),
-		AccessKey:  cfg.GetString("minio.access_key"),
-		SecretKey:  cfg.GetString("minio.secret_key"),
+		AccessKey:  os.Getenv("S3_ACCESS_KEY"),
+		SecretKey:  os.Getenv("S3_SECRET_KEY"),
 		BucketName: cfg.GetString("minio.bucket"),
+		BaseURL:    cfg.GetString("minio.base_url"),
+		SSL:        false, // not for production
 	})
 	if err != nil {
 		zlog.Logger.Fatal().Err(err).Msg("failed to create minio client")
@@ -53,7 +60,7 @@ func main() {
 
 	srv := api.New(h)
 
-	if err := srv.Run(); err != nil {
+	if err := srv.Run(cfg.GetString("server.addr")); err != nil {
 		zlog.Logger.Fatal().Err(err).Msg("failed to run server")
 	}
 
@@ -65,5 +72,5 @@ func main() {
 		zlog.Logger.Err(err).Msg("failed to close postgres client")
 	}
 	_ = prod.Close()
-	
+
 }

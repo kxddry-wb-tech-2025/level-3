@@ -1,0 +1,14 @@
+minio:
+  endpoint: localhost:9000
+  bucket: images
+  base_url: http://localhost:9000
+  ssl: false
+
+kafka:
+  brokers: localhost:29092
+
+postgres:
+  masterdsn: postgres://postgres:${POSTGRES_PASSWORD}@localhost:5432/postgres?sslmode=disable
+
+server:
+  addr: 0.0.0.0:8080

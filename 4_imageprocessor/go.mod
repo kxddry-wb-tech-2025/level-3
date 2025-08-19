@@ -6,6 +6,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.6.0
+	github.com/joho/godotenv v1.5.1
 	github.com/kxddry/wbf v1.0.0
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/segmentio/kafka-go v0.4.37

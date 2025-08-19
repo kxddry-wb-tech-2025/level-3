@@ -36,9 +36,9 @@ func New(h Handler) *Server {
 }
 
 // Run starts the server.
-func (s *Server) Run() error {
+func (s *Server) Run(addrs ...string) error {
 	s.registerRoutes()
-	return s.r.Run()
+	return s.r.Run(addrs...)
 }
 
 // registerRoutes registers the routes for the server.

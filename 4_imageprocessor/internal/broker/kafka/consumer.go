@@ -26,7 +26,7 @@ func NewConsumer(brokers []string, topic, groupID string, strat retry.Strategy) 
 }
 
 // StartConsuming starts consuming messages from the Kafka topic.
-func (c *Consumer) StartConsuming(ctx context.Context, out chan<- *domain.Task) {
+func (c *Consumer) StartConsuming(ctx context.Context, out chan<- *domain.KafkaMessage) {
 	const op = "broker.kafka.Consumer.StartConsuming"
 	in := make(chan kafka_go.Message)
 	go func() {
@@ -45,9 +45,16 @@ func (c *Consumer) StartConsuming(ctx context.Context, out chan<- *domain.Task) 
 					continue
 				}
 
+				km := domain.KafkaMessage{
+					Task: t,
+					Commit: func() error {
+						return c.consumer.Commit(ctx, msg)
+					},
+				}
+
 				t.Status = string(msg.Key)
 				select {
-				case out <- &t:
+				case out <- &km:
 				case <-ctx.Done():
 					return
 				}
