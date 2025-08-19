@@ -24,7 +24,8 @@ type Server struct {
 	h Handler
 }
 
-func New(r *ginext.Engine, h Handler) *Server {
+func New(h Handler) *Server {
+	r := ginext.New()
 	return &Server{
 		r: r,
 		h: h,
