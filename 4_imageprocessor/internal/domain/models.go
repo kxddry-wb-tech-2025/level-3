@@ -14,3 +14,8 @@ type Task struct {
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type Image struct {
+	URL    string `json:"url,omitempty"`
+	Status string `json:"status"`
+}
