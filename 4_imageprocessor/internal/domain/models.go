@@ -29,6 +29,7 @@ type Image struct {
 	Status string `json:"status"`
 }
 
+// File is the main file struct that contains the file's name, data, size, and content type.
 type File struct {
 	Name        string
 	Data        io.ReadSeekCloser

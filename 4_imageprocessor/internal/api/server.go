@@ -13,17 +13,20 @@ import (
 	"github.com/kxddry/wbf/ginext"
 )
 
+// Handler is the interface that wraps the basic methods for the API.
 type Handler interface {
 	UploadImage(ctx context.Context, file *domain.File) error
 	GetImage(ctx context.Context, id string) (*domain.Image, error)
 	DeleteImage(ctx context.Context, id string) error
 }
 
+// Server is the struct that contains the engine and the handler.
 type Server struct {
 	r *ginext.Engine
 	h Handler
 }
 
+// New creates a new server with the given handler.
 func New(h Handler) *Server {
 	r := ginext.New()
 	return &Server{
@@ -32,17 +35,20 @@ func New(h Handler) *Server {
 	}
 }
 
+// Run starts the server.
 func (s *Server) Run() error {
 	s.registerRoutes()
 	return s.r.Run()
 }
 
+// registerRoutes registers the routes for the server.
 func (s *Server) registerRoutes() {
 	s.r.POST("/upload", s.uploadImage())
 	s.r.GET("/image/:id", s.getImage())
 	s.r.DELETE("/image/:id", s.deleteImage())
 }
 
+// uploadImage is the handler for the upload image route.
 func (s *Server) uploadImage() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		file, err := c.FormFile("file")
@@ -101,6 +107,7 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 	}
 }
 
+// getImage is the handler for the get image route.
 func (s *Server) getImage() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		id := c.Param("id")
@@ -119,6 +126,7 @@ func (s *Server) getImage() gin.HandlerFunc {
 	}
 }
 
+// deleteImage is the handler for the delete image route.
 func (s *Server) deleteImage() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		id := c.Param("id")

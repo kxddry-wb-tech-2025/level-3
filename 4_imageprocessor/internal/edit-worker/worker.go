@@ -9,31 +9,37 @@ import (
 	"github.com/kxddry/wbf/zlog"
 )
 
+// Editor is the interface that wraps the basic methods for the editor.
 type Editor interface {
 	Resize(ctx context.Context, file *domain.File) error
 }
 
+// Storage is the interface that wraps the basic methods for the storage.
 type Storage interface {
 	GetStatus(ctx context.Context, id string) (string, error)
 	UpdateStatus(ctx context.Context, id string, status string) error
 	AddNewID(ctx context.Context, fileName string, newID string) error
 }
 
+// FileStorage is the interface that wraps the basic methods for the file storage.
 type FileStorage interface {
 	Get(ctx context.Context, id string) (*domain.File, error)
 	Upload(ctx context.Context, file *domain.File) error
 }
 
+// Worker is the struct that contains the editor, storage, and file storage.
 type Worker struct {
 	editor Editor
 	st     Storage
 	fs     FileStorage
 }
 
+// NewWorker creates a new worker with the given editor, storage, and file storage.
 func NewWorker(editor Editor, st Storage, fs FileStorage) *Worker {
 	return &Worker{editor: editor, st: st, fs: fs}
 }
 
+// Handle starts the worker.
 func (w *Worker) Handle(ctx context.Context, ch <-chan *domain.Task) {
 	const op = "editworker.Handle"
 	for {

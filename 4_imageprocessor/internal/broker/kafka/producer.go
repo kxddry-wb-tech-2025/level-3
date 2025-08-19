@@ -11,11 +11,13 @@ import (
 	"github.com/kxddry/wbf/retry"
 )
 
+// Producer is the struct that contains the producer and the strategy.
 type Producer struct {
 	strat    retry.Strategy
 	producer *kafka.Producer
 }
 
+// NewProducer creates a new producer with the given brokers, topic, and strategy.
 func NewProducer(brokers []string, topic string, strat retry.Strategy) *Producer {
 	return &Producer{
 		strat:    strat,
@@ -28,6 +30,7 @@ type task struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// SendTask sends a task to the Kafka topic.
 func (p *Producer) SendTask(ctx context.Context, t *domain.Task) error {
 	const op = "broker.kafka.SendTask"
 	tt := task{t.FileName, t.CreatedAt}
@@ -42,6 +45,7 @@ func (p *Producer) SendTask(ctx context.Context, t *domain.Task) error {
 	return nil
 }
 
+// Close closes the producer.
 func (p *Producer) Close() error {
 	return p.producer.Close()
 }
