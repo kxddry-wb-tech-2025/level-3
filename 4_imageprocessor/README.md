@@ -10,75 +10,21 @@ A modern web application for uploading, processing, and managing images with a b
 - **Modern UI**: Responsive design with beautiful gradients and animations
 - **RESTful API**: Clean API endpoints for programmatic access
 
-## Frontend
-
-The application includes a modern, responsive frontend built with vanilla HTML, CSS, and JavaScript. The frontend provides:
-
-### Upload Section
-- Drag and drop interface for easy file uploads
-- File type validation (JPEG/PNG only)
-- File size validation (20MB limit)
-- Progress indication during upload
-- Success/error notifications
-
-### Status Check Section
-- Check processing status by image ID
-- Real-time status updates
-- Display of processed image URLs
-- Image preview for completed uploads
-- Delete functionality for processed images
-
-### Features
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Modern UI**: Beautiful gradients, smooth animations, and intuitive interface
-- **Error Handling**: Clear error messages and validation feedback
-- **Accessibility**: Keyboard navigation and screen reader support
-
-## API Endpoints
-
-### Upload Image
-```
-POST /upload
-Content-Type: multipart/form-data
-
-Parameters:
-- file: Image file (JPEG/PNG, max 20MB)
-
-Response:
-{
-  "id": "uuid-string"
-}
-```
-
-### Get Image Status
-```
-GET /image/{id}
-
-Response:
-{
-  "url": "http://example.com/image.jpg",  // Only for completed images
-  "status": "pending|running|completed|failed"
-}
-```
-
-### Delete Image
-```
-DELETE /image/{id}
-
-Response:
-{
-  "id": "uuid-string"
-}
-```
-
-## Status Types
-
-- **pending**: Image is queued for processing
-- **running**: Image is currently being processed
-- **completed**: Image processing is complete, URL is available
-- **failed**: Image processing failed
 
 ## Getting Started
+
+
+0. **Clone the repository, then create an .env file with the content below**:
+    ```bash
+    git clone https://github.com/kxddry-wb-tech-2025/level-3
+    cd level-3/4_imageprocessor
+
+    echo "
+    POSTGRES_PASSWORD=<password>
+    S3_ACCESS_KEY=<access_key>
+    S3_SECRET_KEY=<secret_key>
+    " > .env
+    ```
 
 1. **Start the Backend Services**:
    ```bash
@@ -86,7 +32,7 @@ Response:
    ```
 
 2. **Access the Frontend**:
-   Open your browser and navigate to `http://localhost:8080`
+   Open your browser and navigate to your server address (default  is `localhost:8080/`)
 
 3. **Upload an Image**:
    - Drag and drop an image file or click to browse

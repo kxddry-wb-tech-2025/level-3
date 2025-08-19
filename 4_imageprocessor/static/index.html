@@ -464,7 +464,6 @@
 
                 if (image.status === 'completed' && image.url) {
                     content += `
-                        <p><strong>Image URL:</strong> <a href="${image.url}" target="_blank">${image.url}</a></p>
                         <img src="${image.url}" alt="Processed image" class="image-preview">
                         <br><br>
                         <button class="btn btn-danger" onclick="imageProcessor.deleteImage('${this.imageId.value}')">Delete Image</button>
