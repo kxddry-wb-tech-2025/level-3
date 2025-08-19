@@ -12,6 +12,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+// Config is the struct that contains the minio configuration.
 type Config struct {
 	Endpoint   string
 	AccessKey  string
@@ -52,6 +53,7 @@ func New(ctx context.Context, cfg Config) (*Storage, error) {
 	return &Storage{client: client, bucketName: cfg.BucketName, baseURL: cfg.BaseURL}, nil
 }
 
+// Upload uploads a file to the minio storage.
 func (s *Storage) Upload(ctx context.Context, file *domain.File) error {
 	const op = "storage.minio.Upload"
 	_, err := s.client.PutObject(ctx, s.bucketName, file.Name, file.Data, file.Size, minio.PutObjectOptions{
@@ -64,6 +66,7 @@ func (s *Storage) Upload(ctx context.Context, file *domain.File) error {
 	return nil
 }
 
+// GetURL gets the URL of a file from the minio storage.
 func (s *Storage) GetURL(ctx context.Context, fileName string) (string, error) {
 	const op = "storage.minio.GetURL"
 	presignedURL, err := s.client.PresignedGetObject(ctx, s.bucketName, fileName, time.Hour*24, nil)
@@ -74,6 +77,7 @@ func (s *Storage) GetURL(ctx context.Context, fileName string) (string, error) {
 	return presignedURL.String(), nil
 }
 
+// Get gets a file from the minio storage.
 func (s *Storage) Get(ctx context.Context, fileName string) (*domain.File, error) {
 	const op = "storage.minio.Get"
 	object, err := s.client.GetObject(ctx, s.bucketName, fileName, minio.GetObjectOptions{})
@@ -100,6 +104,7 @@ func (s *Storage) Get(ctx context.Context, fileName string) (*domain.File, error
 	}, nil
 }
 
+// Delete deletes a file from the minio storage.
 func (s *Storage) Delete(ctx context.Context, fileName string) error {
 	const op = "storage.minio.Delete"
 	err := s.client.RemoveObject(ctx, s.bucketName, fileName, minio.RemoveObjectOptions{})

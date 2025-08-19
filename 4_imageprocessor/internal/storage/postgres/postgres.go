@@ -33,6 +33,7 @@ func (s *Storage) execAndCheck(ctx context.Context, query string, args ...any) e
 	return nil
 }
 
+// New creates a new postgres storage with the given master and slaves.
 func New(master string, slaves ...string) (*Storage, error) {
 	const op = "storage.postgres.New"
 
@@ -48,6 +49,7 @@ func New(master string, slaves ...string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
+// Close closes the postgres storage.
 func (s *Storage) Close() error {
 	for _, s := range s.db.Slaves {
 		_ = s.Close()
@@ -55,6 +57,7 @@ func (s *Storage) Close() error {
 	return s.db.Master.Close()
 }
 
+// AddFile adds a new file to the postgres storage.
 func (s *Storage) AddFile(ctx context.Context, file *domain.File) error {
 	const op = "storage.postgres.AddFile"
 
@@ -67,6 +70,7 @@ func (s *Storage) AddFile(ctx context.Context, file *domain.File) error {
 	return nil
 }
 
+// UpdateStatus updates the status of a file in the postgres storage.
 func (s *Storage) UpdateStatus(ctx context.Context, fileName string, status string) error {
 	const op = "storage.postgres.UpdateStatus"
 
@@ -79,6 +83,7 @@ func (s *Storage) UpdateStatus(ctx context.Context, fileName string, status stri
 	return nil
 }
 
+// AddNewID adds a new ID to a file in the postgres storage.
 func (s *Storage) AddNewID(ctx context.Context, fileName string, newID string) error {
 	const op = "storage.postgres.AddNewID"
 
@@ -91,6 +96,7 @@ func (s *Storage) AddNewID(ctx context.Context, fileName string, newID string) e
 	return nil
 }
 
+// GetStatus gets the status of a file in the postgres storage.
 func (s *Storage) GetStatus(ctx context.Context, id string) (string, error) {
 	const op = "storage.postgres.GetStatus"
 
@@ -117,6 +123,7 @@ func (s *Storage) GetStatus(ctx context.Context, id string) (string, error) {
 	return status, nil
 }
 
+// GetFileName gets the file name of a file in the postgres storage.
 func (s *Storage) GetFileName(ctx context.Context, id string) (string, error) {
 	const op = "storage.postgres.GetFileName"
 
@@ -142,6 +149,7 @@ func (s *Storage) GetFileName(ctx context.Context, id string) (string, error) {
 	return id + "." + ext, nil
 }
 
+// DeleteFile deletes a file from the postgres storage.
 func (s *Storage) DeleteFile(ctx context.Context, id string) error {
 	const op = "storage.postgres.DeleteFile"
 

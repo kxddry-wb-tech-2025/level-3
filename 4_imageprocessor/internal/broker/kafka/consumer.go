@@ -11,11 +11,13 @@ import (
 	kafka_go "github.com/segmentio/kafka-go"
 )
 
+// Consumer is the struct that contains the consumer and the strategy.
 type Consumer struct {
 	strat    retry.Strategy
 	consumer *kafka.Consumer
 }
 
+// NewConsumer creates a new consumer with the given brokers, topic, groupID, and strategy.
 func NewConsumer(brokers []string, topic, groupID string, strat retry.Strategy) *Consumer {
 	return &Consumer{
 		strat:    strat,
@@ -23,6 +25,7 @@ func NewConsumer(brokers []string, topic, groupID string, strat retry.Strategy) 
 	}
 }
 
+// StartConsuming starts consuming messages from the Kafka topic.
 func (c *Consumer) StartConsuming(ctx context.Context, out chan<- *domain.Task) {
 	const op = "broker.kafka.Consumer.StartConsuming"
 	in := make(chan kafka_go.Message)
@@ -55,6 +58,7 @@ func (c *Consumer) StartConsuming(ctx context.Context, out chan<- *domain.Task) 
 	c.consumer.StartConsuming(ctx, in, c.strat)
 }
 
+// Close closes the consumer.
 func (c *Consumer) Close() error {
 	return c.consumer.Close()
 }

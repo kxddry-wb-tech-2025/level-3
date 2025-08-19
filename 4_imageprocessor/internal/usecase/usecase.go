@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// FileStorage is the interface that wraps the basic methods for the file storage.
 type FileStorage interface {
 	Upload(ctx context.Context, file *domain.File) error
 	GetURL(ctx context.Context, fileName string) (string, error)
@@ -14,6 +15,7 @@ type FileStorage interface {
 	Delete(ctx context.Context, fileName string) error
 }
 
+// StatusStorage is the interface that wraps the basic methods for the status storage.
 type StatusStorage interface {
 	AddFile(ctx context.Context, file *domain.File) error
 	UpdateStatus(ctx context.Context, fileName string, status string) error
@@ -22,20 +24,24 @@ type StatusStorage interface {
 	DeleteFile(ctx context.Context, id string) error
 }
 
+// TaskSender is the interface that wraps the basic methods for the task sender.
 type TaskSender interface {
 	SendTask(ctx context.Context, task *domain.Task) error
 }
 
+// Handler is the struct that contains the file storage, status storage, and task sender.
 type Handler struct {
 	fs FileStorage
 	ss StatusStorage
 	ts TaskSender
 }
 
+// New creates a new handler with the given file storage, status storage, and task sender.
 func New(fs FileStorage, ss StatusStorage, ts TaskSender) *Handler {
 	return &Handler{fs: fs, ss: ss, ts: ts}
 }
 
+// UploadImage uploads an image to the storage.
 func (h *Handler) UploadImage(ctx context.Context, file *domain.File) error {
 	const op = "usecase.UploadImage"
 
@@ -58,6 +64,7 @@ func (h *Handler) UploadImage(ctx context.Context, file *domain.File) error {
 	return nil
 }
 
+// GetImage gets an image from the storage.
 func (h *Handler) GetImage(ctx context.Context, id string) (*domain.Image, error) {
 	const op = "usecase.GetImage"
 
@@ -89,6 +96,7 @@ func (h *Handler) GetImage(ctx context.Context, id string) (*domain.Image, error
 	}, nil
 }
 
+// DeleteImage deletes an image from the storage.
 func (h *Handler) DeleteImage(ctx context.Context, id string) error {
 	const op = "usecase.DeleteImage"
 
