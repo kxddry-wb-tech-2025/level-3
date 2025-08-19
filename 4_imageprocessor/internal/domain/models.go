@@ -18,7 +18,7 @@ const (
 
 // Task is the main task struct that contains the task's id, status, and creation time.
 type Task struct {
-	ID        string    `json:"id"`
+	FileName  string    `json:"file_name"`
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 }

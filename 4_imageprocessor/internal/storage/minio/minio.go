@@ -2,7 +2,6 @@ package minio
 
 import (
 	"context"
-	"fmt"
 	"image-processor/internal/domain"
 	"mime"
 	"path/filepath"
@@ -51,18 +50,12 @@ func New(ctx context.Context, cfg Config) (*Storage, error) {
 	return &Storage{client: client, bucketName: cfg.BucketName, baseURL: cfg.BaseURL}, nil
 }
 
-func (s *Storage) Upload(ctx context.Context, file *domain.File) (string, error) {
-	fileName := fmt.Sprintf("%s.%s", file.Name, filepath.Ext(file.ContentType))
-
-	_, err := s.client.PutObject(ctx, s.bucketName, fileName, file.Data, file.Size, minio.PutObjectOptions{
+func (s *Storage) Upload(ctx context.Context, file *domain.File) error {
+	_, err := s.client.PutObject(ctx, s.bucketName, file.Name, file.Data, file.Size, minio.PutObjectOptions{
 		ContentType: file.ContentType,
 	})
 
-	if err != nil {
-		return "", err
-	}
-
-	return fileName, nil
+	return err
 }
 
 func (s *Storage) GetURL(ctx context.Context, fileName string) (string, error) {

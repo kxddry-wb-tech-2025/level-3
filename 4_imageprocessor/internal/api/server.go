@@ -2,9 +2,11 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"image-processor/internal/domain"
 	"io"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,7 +15,7 @@ import (
 )
 
 type Storage interface {
-	Upload(ctx context.Context, file domain.File) (string, error)
+	Upload(ctx context.Context, file domain.File) error
 }
 
 type TaskSender interface {
@@ -97,20 +99,24 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 			return
 		}
 
+		id := uuid.New().String()
+		fileName := fmt.Sprintf("%s.%s", id, filepath.Ext(file.Filename))
+
 		// upload the file to the storage
-		uuid, err := s.st.Upload(c.Request.Context(), domain.File{
+		err = s.st.Upload(c.Request.Context(), domain.File{
+			Name:        fileName,
 			Data:        data,
 			Size:        file.Size,
 			ContentType: contentType,
 		})
-		
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		task := &domain.Task{
-			ID:        uuid,
+			FileName:  fileName,
 			Status:    domain.StatusPending,
 			CreatedAt: time.Now(),
 		}
@@ -120,7 +126,7 @@ func (s *Server) uploadImage() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"id": uuid, "time": task.CreatedAt, "status": task.Status})
+		c.JSON(http.StatusOK, gin.H{"id": id, "time": task.CreatedAt, "status": task.Status})
 	}
 }
 
