@@ -51,7 +51,8 @@ services:
       expose:
         - "9092:9092"
         - "9093:9093"
-
+      ports:
+        - "29092:29092"
       environment:
         KAFKA_BROKER_ID: 1
         KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT

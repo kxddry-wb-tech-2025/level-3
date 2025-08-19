@@ -11,7 +11,8 @@ import (
 
 // Editor is the interface that wraps the basic methods for the editor.
 type Editor interface {
-	Resize(ctx context.Context, file *domain.File) error
+	Resize(file *domain.File) error
+	AddWatermark(file *domain.File) error
 }
 
 // Storage is the interface that wraps the basic methods for the storage.
@@ -51,13 +52,14 @@ func (w *Worker) Handle(ctx context.Context, ch <-chan *domain.KafkaMessage) {
 				return
 			}
 			task := km.Task
-			status, err := w.st.GetStatus(ctx, task.FileName)
+			id, _ := helpers.Split(task.FileName)
+			status, err := w.st.GetStatus(ctx, id)
 			if err != nil {
 				zlog.Logger.Err(err).Str("op", op).Msg("failed to get status")
 				continue
 			}
 
-			if string(status) != domain.StatusPending {
+			if string(status) != domain.StatusPending && string(status) != domain.StatusFailed {
 				continue
 			}
 
@@ -72,8 +74,8 @@ func (w *Worker) Handle(ctx context.Context, ch <-chan *domain.KafkaMessage) {
 			}
 
 			// only resize for now
-			if err := w.editor.Resize(ctx, file); err != nil {
-				zlog.Logger.Err(err).Str("op", op).Msg("failed to resize file")
+			if err := w.editor.AddWatermark(file); err != nil {
+				zlog.Logger.Err(err).Str("op", op).Msg("failed to add watermark")
 
 				// the file is probably corrupted, so we won't try resizing it again
 				if err := km.Commit(); err != nil {
