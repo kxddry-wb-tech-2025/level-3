@@ -32,6 +32,15 @@ type BookResponse struct {
 	Error           string    `json:"error,omitempty"`
 }
 
+// DelayedNotification is the value object for a delayed notification.
+// It is used to send a notification to a user at a specific time.
+type DelayedNotification struct {
+	SendAt     *time.Time
+	TelegramID string
+	EventID    string
+	BookingID  string
+}
+
 // ConfirmRequest is the request body for confirming a booking.
 type ConfirmRequest struct {
 	BookingID string `json:"booking_id,omitempty" validate:"required,uuid"`
@@ -51,4 +60,12 @@ type EventDetailsResponse struct {
 	Capacity  int       `json:"capacity,omitempty"`
 	Date      time.Time `json:"date,omitempty"`
 	Error     string    `json:"error,omitempty"`
+}
+
+// Booking is the value object for a booking cache.
+type Booking struct {
+	UserID          string    `json:"user_id,omitempty"`
+	EventID         string    `json:"event_id,omitempty"`
+	Status          string    `json:"status,omitempty"`
+	PaymentDeadline time.Time `json:"payment_deadline,omitempty" format:"rfc3339"`
 }

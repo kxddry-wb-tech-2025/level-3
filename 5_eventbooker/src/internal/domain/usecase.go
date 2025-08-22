@@ -13,6 +13,13 @@ type Repository interface {
 	GetEvent(eventID string) (*EventDetailsResponse, error)
 }
 
+// BookingCache is the interface for the booking cache.
+type BookingCache interface {
+	Add(key string, value Booking, ttl time.Duration) error
+	Get(key string) (Booking, error)
+}
+
+// Usecase is the usecase for the event booking service.
 type Usecase struct {
 	validator  *validator.Validate
 	storage    Repository
