@@ -9,7 +9,6 @@ type CreateEventRequest struct {
 	Date     time.Time `json:"date,omitempty" validate:"required"`
 	Capacity int       `json:"capacity,omitempty" validate:"required,min=1,max=2147483647"`
 	Name     string    `json:"name,omitempty" validate:"required,min=1,max=255"`
-	Error    string    `json:"error,omitempty"`
 }
 
 // CreateEventResponse is the response body for creating an event.
@@ -21,7 +20,6 @@ type CreateEventResponse struct {
 // BookRequest is the request body for booking an event.
 type BookRequest struct {
 	UserID string `json:"user_id,omitempty" validate:"required,uuid"`
-	Error  string `json:"error,omitempty"`
 }
 
 // BookResponse is the response body for booking an event.
@@ -44,7 +42,6 @@ type DelayedNotification struct {
 // ConfirmRequest is the request body for confirming a booking.
 type ConfirmRequest struct {
 	BookingID string `json:"booking_id,omitempty" validate:"required,uuid"`
-	Error     string `json:"error,omitempty"`
 }
 
 // ConfirmResponse is the response body for confirming a booking.
@@ -64,8 +61,16 @@ type EventDetailsResponse struct {
 
 // Booking is the value object for a booking cache.
 type Booking struct {
+	ID              string    `json:"id,omitempty"`
 	UserID          string    `json:"user_id,omitempty"`
 	EventID         string    `json:"event_id,omitempty"`
 	Status          string    `json:"status,omitempty"`
 	PaymentDeadline time.Time `json:"payment_deadline,omitempty" format:"rfc3339"`
 }
+
+const (
+	BookingStatusPending   = "pending"
+	BookingStatusConfirmed = "confirmed"
+	BookingStatusCancelled = "cancelled"
+	BookingStatusExpired   = "expired"
+)

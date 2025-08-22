@@ -82,6 +82,7 @@ func (c *Client) SendDelayed(notif domain.DelayedNotification) error {
 	return nil
 }
 
+// CancelDelayed cancels a delayed notification.
 func (c *Client) CancelDelayed(bookingID string) error {
 	recipient, err := c.mp.Get(bookingID)
 	if err != nil {
