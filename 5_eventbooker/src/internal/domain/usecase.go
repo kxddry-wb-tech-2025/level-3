@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"errors"
+	"eventbooker/src/internal/storage"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -171,4 +172,26 @@ func (u *Usecase) Confirm(eventID, bookingID string) ConfirmResponse {
 	return ConfirmResponse{
 		Status: status,
 	}
+}
+
+func (u *Usecase) GetEvent(eventID string) EventDetailsResponse {
+	var event EventDetailsResponse
+	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
+		var err error
+		event, err = tx.GetEvent(eventID)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				return errors.New("event not found")
+			}
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return EventDetailsResponse{
+			Error: err.Error(),
+		}
+	}
+
+	return event
 }
