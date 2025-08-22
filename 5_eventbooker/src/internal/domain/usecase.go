@@ -11,14 +11,14 @@ import (
 )
 
 type EventRepository interface {
-	CreateEvent(event CreateEventRequest) (string, error)
-	GetEvent(eventID string) (EventDetailsResponse, error)
+	CreateEvent(ctx context.Context, event CreateEventRequest) (string, error)
+	GetEvent(ctx context.Context, eventID string) (EventDetailsResponse, error)
 }
 
 type BookingRepository interface {
-	Book(eventID, userID string, paymentDeadline time.Time) (string, error)
-	GetBooking(bookingID string) (Booking, error)
-	Confirm(bookingID string) (string, error)
+	Book(ctx context.Context, eventID, userID string, paymentDeadline time.Time) (string, error)
+	GetBooking(ctx context.Context, bookingID string) (Booking, error)
+	Confirm(ctx context.Context, bookingID string) (string, error)
 }
 
 type Tx interface {
@@ -58,7 +58,7 @@ func NewUsecase(nfs NotificationService, storage TxManager) *Usecase {
 	}
 }
 
-func (u *Usecase) CreateEvent(event CreateEventRequest) CreateEventResponse {
+func (u *Usecase) CreateEvent(ctx context.Context, event CreateEventRequest) CreateEventResponse {
 	if !event.Date.After(time.Now()) {
 		return CreateEventResponse{
 			Error: "event date must be in the future",
@@ -68,7 +68,7 @@ func (u *Usecase) CreateEvent(event CreateEventRequest) CreateEventResponse {
 	var id string
 	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
 		var err error
-		id, err = tx.CreateEvent(event)
+		id, err = tx.CreateEvent(ctx, event)
 		if err != nil {
 			return err
 		}
@@ -86,11 +86,11 @@ func (u *Usecase) CreateEvent(event CreateEventRequest) CreateEventResponse {
 	}
 }
 
-func (u *Usecase) Book(eventID string, userID string) BookResponse {
+func (u *Usecase) Book(ctx context.Context, eventID string, userID string) BookResponse {
 	var bookingID string
 	var paymentDeadline time.Time
 	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
-		event, err := tx.GetEvent(eventID)
+		event, err := tx.GetEvent(ctx, eventID)
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func (u *Usecase) Book(eventID string, userID string) BookResponse {
 			return errors.New("event is in the past")
 		}
 		paymentDeadline = time.Now().Add(event.PaymentTTL)
-		bookingID, err = tx.Book(eventID, userID, paymentDeadline)
+		bookingID, err = tx.Book(ctx, eventID, userID, paymentDeadline)
 		if err != nil {
 			return err
 		}
@@ -134,7 +134,7 @@ func (u *Usecase) Book(eventID string, userID string) BookResponse {
 func (u *Usecase) Confirm(eventID, bookingID string) ConfirmResponse {
 	var status string
 	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
-		booking, err := tx.GetBooking(bookingID)
+		booking, err := tx.GetBooking(ctx, bookingID)
 		if err != nil {
 			return err
 		}
@@ -153,7 +153,7 @@ func (u *Usecase) Confirm(eventID, bookingID string) ConfirmResponse {
 			zlog.Logger.Err(errors.New("invalid booking status")).Msg("invalid booking status")
 			panic(errors.New("invalid booking status in the database"))
 		}
-		status, err = tx.Confirm(bookingID)
+		status, err = tx.Confirm(ctx, bookingID)
 		if err != nil {
 			return err
 		}
@@ -174,11 +174,11 @@ func (u *Usecase) Confirm(eventID, bookingID string) ConfirmResponse {
 	}
 }
 
-func (u *Usecase) GetEvent(eventID string) EventDetailsResponse {
+func (u *Usecase) GetEvent(ctx context.Context, eventID string) EventDetailsResponse {
 	var event EventDetailsResponse
 	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
 		var err error
-		event, err = tx.GetEvent(eventID)
+		event, err = tx.GetEvent(ctx, eventID)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				return errors.New("event not found")
