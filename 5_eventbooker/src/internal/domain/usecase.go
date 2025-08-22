@@ -1,19 +1,34 @@
 package domain
 
 import (
+	"context"
 	"errors"
-	"eventbooker/src/internal/storage"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/kxddry/wbf/zlog"
 )
 
-type Repository interface {
+type EventRepository interface {
 	CreateEvent(event CreateEventRequest) (string, error)
-	Book(eventID string, userID string) (Booking, error)
-	Confirm(bookingID string) (string, error)
 	GetEvent(eventID string) (EventDetailsResponse, error)
+}
+
+type BookingRepository interface {
+	Book(eventID string, userID string) (Booking, error)
+	GetBooking(bookingID string) (Booking, error)
+	Confirm(bookingID string) (string, error)
+}
+
+type Tx interface {
+	EventRepository
+	BookingRepository
+	Commit() error
+	Rollback() error
+}
+
+type TxManager interface {
+	Do(ctx context.Context, fn func(ctx context.Context, tx Tx) error) error
 }
 
 type NotificationService interface {
@@ -31,11 +46,11 @@ type BookingCache interface {
 type Usecase struct {
 	nfs        NotificationService
 	validator  *validator.Validate
-	storage    Repository
+	storage    TxManager
 	bookingTTL time.Duration
 }
 
-func NewUsecase(nfs NotificationService, storage Repository, bookingTTL time.Duration) *Usecase {
+func NewUsecase(nfs NotificationService, storage TxManager, bookingTTL time.Duration) *Usecase {
 	return &Usecase{
 		nfs:        nfs,
 		validator:  validator.New(),
@@ -45,19 +60,22 @@ func NewUsecase(nfs NotificationService, storage Repository, bookingTTL time.Dur
 }
 
 func (u *Usecase) CreateEvent(event CreateEventRequest) CreateEventResponse {
-	if err := u.validator.Struct(event); err != nil {
-		return CreateEventResponse{
-			Error: err.Error(),
-		}
-	}
-
 	if !event.Date.After(time.Now()) {
 		return CreateEventResponse{
 			Error: "event date must be in the future",
 		}
 	}
 
-	id, err := u.storage.CreateEvent(event)
+	var id string
+	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
+		var err error
+		id, err = tx.CreateEvent(event)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
 	if err != nil {
 		return CreateEventResponse{
 			Error: err.Error(),
@@ -70,35 +88,24 @@ func (u *Usecase) CreateEvent(event CreateEventRequest) CreateEventResponse {
 }
 
 func (u *Usecase) Book(eventID string, userID string) BookResponse {
-	event, err := u.storage.GetEvent(eventID)
-	// 3 possible failure scenarios:
-	// 1. event not found
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return BookResponse{
-				Error: "event not found",
-			}
+	var booking Booking
+	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
+		event, err := tx.GetEvent(eventID)
+		if err != nil {
+			return err
 		}
-		return BookResponse{
-			Error: err.Error(),
+		if event.Available <= 0 {
+			return errors.New("event is full")
 		}
-	}
-
-	// 2. event is full
-	if event.Available <= 0 {
-		return BookResponse{
-			Error: "event is full",
+		if event.Date.Before(time.Now()) {
+			return errors.New("event is in the past")
 		}
-	}
-
-	// 3. event is in the past
-	if event.Date.Before(time.Now()) {
-		return BookResponse{
-			Error: "event is in the past",
+		booking, err = tx.Book(eventID, userID)
+		if err != nil {
+			return err
 		}
-	}
-
-	booking, err := u.storage.Book(eventID, userID)
+		return nil
+	})
 	if err != nil {
 		return BookResponse{
 			Error: err.Error(),
