@@ -1,7 +1,12 @@
 package booking
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"eventbooker/src/internal/domain"
+	"eventbooker/src/internal/storage"
+	"time"
 
 	"github.com/kxddry/wbf/dbpg"
 )
@@ -30,14 +35,23 @@ CREATE TABLE bookings (
 )
 */
 
-func (r *BookingRepository) Book(eventID, userID string) (domain.Booking, error) {
+func (r *BookingRepository) Book(ctx context.Context, eventID, userID string, paymentDeadline time.Time) (string, error) {
+	var id string
+	err := r.db.Master.QueryRowContext(ctx, `INSERT INTO bookings (event_id, user_id, payment_deadline) VALUES ($1, $2, $3) RETURNING id`, eventID, userID, paymentDeadline).Scan(&id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", storage.ErrEventNotFound
+		}
+		return "", err
+	}
+
+	return id, nil
+}
+
+func (r *BookingRepository) GetBooking(ctx context.Context, bookingID string) (domain.Booking, error) {
 	panic("not implemented")
 }
 
-func (r *BookingRepository) GetBooking(bookingID string) (domain.Booking, error) {
-	panic("not implemented")
-}
-
-func (r *BookingRepository) Confirm(bookingID string) (string, error) {
+func (r *BookingRepository) Confirm(ctx context.Context, bookingID string) (string, error) {
 	panic("not implemented")
 }
