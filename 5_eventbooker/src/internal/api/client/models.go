@@ -2,6 +2,7 @@ package client
 
 import "time"
 
+// SendNotificationRequest is the request body for sending a notification.
 type SendNotificationRequest struct {
 	SendAt    *time.Time `json:"send_at"`
 	Channel   string     `json:"channel"`
@@ -9,6 +10,7 @@ type SendNotificationRequest struct {
 	Message   string     `json:"message"`
 }
 
+// SendNotificationResponse is the response body for sending a notification.
 type SendNotificationResponse struct {
 	ID         string    `json:"id"`
 	Channel    string    `json:"channel"`
@@ -21,16 +23,19 @@ type SendNotificationResponse struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+// CancelNotificationRequest is the request body for canceling a notification.
 type CancelNotificationRequest struct {
 	ID string `json:"id"`
 }
 
+// CancelSuccess is the status code for a successful cancellation.
 const (
 	CancelSuccess       = 204 // No Content
 	CancelNotFound      = 404 // Not Found
 	CancelInternalError = 500 // Internal Server Error
 )
 
+// SendSuccess is the status code for a successful send.
 const (
 	SendSuccess       = 202 // Accepted
 	SendInternalError = 500 // Internal Server Error

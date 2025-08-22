@@ -2,7 +2,6 @@ package cache
 
 import (
 	"container/list"
-	c "context"
 	"eventbooker/src/internal/storage"
 	"sync"
 	"time"
@@ -43,7 +42,7 @@ func NewCache(ttl time.Duration, limit int) *Cache {
 }
 
 // Set sets a value in the cache
-func (c *Cache) Set(ctx c.Context, key string, value any) error {
+func (c *Cache) Set(key string, value any) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -77,17 +76,18 @@ func (c *Cache) removeLRU() {
 	c.remove(orderID)
 }
 
-func (c *Cache) remove(orderID string) {
-	entry, ok := c.mp[orderID]
+// this "remove" function is meant to be used within a blocked mutex
+func (c *Cache) remove(key string) {
+	entry, ok := c.mp[key]
 	if !ok {
 		return
 	}
 	c.lru.Remove(entry.lruElem)
-	delete(c.mp, orderID)
+	delete(c.mp, key)
 }
 
 // Get gets a value from the cache
-func (c *Cache) Get(ctx c.Context, key string) (any, error) {
+func (c *Cache) Get(key string) (any, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -132,4 +132,12 @@ func (c *Cache) removeExpired() {
 // Stop stops the cache
 func (c *Cache) Stop() {
 	close(c.stopChan)
+}
+
+// Remove concurrently-safely removes a value from the cache
+func (c *Cache) Remove(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.remove(key)
 }
