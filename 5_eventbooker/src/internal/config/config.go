@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	cfg "github.com/kxddry/wbf/config"
@@ -12,11 +13,16 @@ type Config struct {
 	Srv         Server
 	BookTimeout time.Duration
 	CronTicker  time.Duration
-	StorageDSN  string
+	Storage     Storage
 }
 
 type Server struct {
 	Addr string
+}
+
+type Storage struct {
+	MasterDSN string
+	SlaveDSNs []string
 }
 
 func (c *Config) Update(file string) error {
@@ -53,9 +59,14 @@ func (c *Config) Update(file string) error {
 		}
 	}
 
-	tmpStorageDSN := os.ExpandEnv(cc.GetString("storage.dsn"))
-	if tmpStorageDSN != "" {
-		c.StorageDSN = tmpStorageDSN
+	tmpStorageMasterDSN := cc.GetString("storage.master_dsn")
+	if tmpStorageMasterDSN != "" {
+		c.Storage.MasterDSN = tmpStorageMasterDSN
+	}
+
+	tmpStorageSlaveDSNs := cc.GetString("storage.slave_dsns")
+	if tmpStorageSlaveDSNs != "" {
+		c.Storage.SlaveDSNs = strings.Split(tmpStorageSlaveDSNs, ",")
 	}
 
 	return nil
@@ -68,6 +79,9 @@ func New() *Config {
 		},
 		BookTimeout: 20 * time.Minute,
 		CronTicker:  15 * time.Minute,
-		StorageDSN:  os.ExpandEnv("postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"),
+		Storage: Storage{
+			MasterDSN: os.ExpandEnv("postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"),
+			SlaveDSNs: nil,
+		},
 	}
 }
