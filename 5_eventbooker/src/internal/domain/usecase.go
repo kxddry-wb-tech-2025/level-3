@@ -12,7 +12,8 @@ import (
 
 type EventRepository interface {
 	CreateEvent(ctx context.Context, event CreateEventRequest) (string, error)
-	GetEvent(ctx context.Context, eventID string) (EventDetailsResponse, error)
+	UpdateEvent(ctx context.Context, event Event) error
+	GetEvent(ctx context.Context, eventID string) (Event, error)
 }
 
 type BookingRepository interface {
@@ -134,6 +135,13 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) BookR
 func (u *Usecase) Confirm(eventID, bookingID string) ConfirmResponse {
 	var status string
 	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
+		event, err := tx.GetEvent(ctx, eventID)
+		if err != nil {
+			if errors.Is(err, storage.ErrEventNotFound) {
+				return errors.New("event not found")
+			}
+			return err
+		}
 		booking, err := tx.GetBooking(ctx, bookingID)
 		if err != nil {
 			return err
@@ -157,6 +165,13 @@ func (u *Usecase) Confirm(eventID, bookingID string) ConfirmResponse {
 		if err != nil {
 			return err
 		}
+
+		// decrement the available capacity on confirmation
+		// I know its better to use it during booking, but I'm too lazy to change the architecture completely
+		event.Available--
+		if err = tx.UpdateEvent(ctx, event); err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
@@ -175,7 +190,7 @@ func (u *Usecase) Confirm(eventID, bookingID string) ConfirmResponse {
 }
 
 func (u *Usecase) GetEvent(ctx context.Context, eventID string) EventDetailsResponse {
-	var event EventDetailsResponse
+	var event Event
 	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
 		var err error
 		event, err = tx.GetEvent(ctx, eventID)
@@ -193,5 +208,11 @@ func (u *Usecase) GetEvent(ctx context.Context, eventID string) EventDetailsResp
 		}
 	}
 
-	return event
+	return EventDetailsResponse{
+		Name:       event.Name,
+		Capacity:   event.Capacity,
+		Available:  event.Available,
+		Date:       event.Date,
+		PaymentTTL: event.PaymentTTL,
+	}
 }
