@@ -62,5 +62,17 @@ func (r *BookingRepository) GetBooking(ctx context.Context, bookingID string) (d
 }
 
 func (r *BookingRepository) Confirm(ctx context.Context, bookingID string) (string, error) {
-	panic("not implemented")
+	var status string
+	res, err := r.db.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, domain.BookingStatusConfirmed, bookingID)
+	if err != nil {
+		return "", err
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return "", err
+	}
+	if rowsAffected == 0 {
+		return "", storage.ErrBookingNotFound
+	}
+	return status, nil
 }
