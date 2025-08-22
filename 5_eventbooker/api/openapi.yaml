@@ -1,0 +1,223 @@
+openapi: 3.1.0
+info:
+  title: Events Booking API
+  version: 1.0.0
+  description: |
+    API for managing events, booking seats, confirming payments, and retrieving event details.
+servers:
+  - url: http://localhost:8080
+    description: Local server
+
+paths:
+  /events:
+    post:
+      summary: Create a new event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventCreateRequest'
+      responses:
+        '200':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventCreateResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{id}/book:
+    post:
+      summary: Book a seat at an event
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        '200':
+          description: Booking result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{id}/confirm:
+    post:
+      summary: Confirm payment for a booking
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmRequest'
+      responses:
+        '200':
+          description: Payment confirmation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /events/{id}:
+    get:
+      summary: Get event details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetailsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          nullable: true
+    EventCreateRequest:
+      type: object
+      required: [date, capacity, name]
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: Date and time of the event in RFC3339 format
+        capacity:
+          type: integer
+          description: Maximum number of seats
+        name:
+          type: string
+          description: Event name
+
+    EventCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+
+    BookingRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: ID of the user booking the seat
+
+    BookingResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        payment_deadline:
+          type: string
+          format: date-time
+          description: Payment deadline in RFC3339 format
+        id:
+          type: string
+          format: uuid
+          description: Booking ID
+
+    ConfirmRequest:
+      type: object
+      required: [booking_id]
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+          description: ID of the confirmed booking
+
+    ConfirmResponse:
+      type: object
+      properties:
+        status:
+          type: string
+
+    EventDetailsResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        available:
+          type: integer
+          description: Available seats
+        capacity:
+          type: integer
+        date:
+          type: string
+          format: date-time
+          description: Event date and time in RFC3339 format

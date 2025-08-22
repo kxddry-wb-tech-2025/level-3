@@ -1,14 +1,14 @@
 package main
 
 import (
-	"eventbooker/internal/config"
+	"eventbooker/src/internal/config"
 	"os"
 
 	"github.com/kxddry/wbf/zlog"
 )
 
 func main() {
-	var cfg config.Config
+	cfg := config.New()
 	zlog.Init()
 	log := zlog.Logger
 	if err := cfg.Update("config.yaml"); err != nil {
