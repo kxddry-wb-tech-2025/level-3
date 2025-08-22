@@ -49,7 +49,16 @@ func (r *BookingRepository) Book(ctx context.Context, eventID, userID string, pa
 }
 
 func (r *BookingRepository) GetBooking(ctx context.Context, bookingID string) (domain.Booking, error) {
-	panic("not implemented")
+	var booking domain.Booking
+	err := r.db.Master.QueryRowContext(ctx, `SELECT event_id, user_id, payment_deadline FROM bookings WHERE id = $1`, bookingID).Scan(&booking.EventID, &booking.UserID, &booking.PaymentDeadline)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Booking{}, storage.ErrBookingNotFound
+		}
+		return domain.Booking{}, err
+	}
+	booking.ID = bookingID
+	return booking, nil
 }
 
 func (r *BookingRepository) Confirm(ctx context.Context, bookingID string) (string, error) {
