@@ -106,10 +106,17 @@ func (c *Client) CancelDelayed(bookingID string) error {
 		return err
 	}
 
-	resp, err := c.client.Post(c.addr+"/notify/cancel", "application/json", bytes.NewBuffer(js))
+	reqHt, err := http.NewRequest(http.MethodDelete, c.addr+"/notify/"+bookingID, bytes.NewReader(js))
 	if err != nil {
 		return err
 	}
+	reqHt.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.client.Do(reqHt)
+	if err != nil {
+		return err
+	}
+
 	defer resp.Body.Close()
 	if resp.StatusCode != CancelSuccess {
 		if resp.StatusCode == CancelNotFound {
