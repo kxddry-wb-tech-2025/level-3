@@ -16,7 +16,7 @@ type EventRepository interface {
 }
 
 type BookingRepository interface {
-	Book(eventID string, userID string) (Booking, error)
+	Book(eventID, userID string, paymentDeadline time.Time) (string, error)
 	GetBooking(bookingID string) (Booking, error)
 	Confirm(bookingID string) (string, error)
 }
@@ -45,18 +45,16 @@ type BookingCache interface {
 
 // Usecase is the usecase for the event booking service.
 type Usecase struct {
-	nfs        NotificationService
-	validator  *validator.Validate
-	storage    TxManager
-	bookingTTL time.Duration
+	nfs       NotificationService
+	validator *validator.Validate
+	storage   TxManager
 }
 
-func NewUsecase(nfs NotificationService, storage TxManager, bookingTTL time.Duration) *Usecase {
+func NewUsecase(nfs NotificationService, storage TxManager) *Usecase {
 	return &Usecase{
-		nfs:        nfs,
-		validator:  validator.New(),
-		storage:    storage,
-		bookingTTL: bookingTTL,
+		nfs:       nfs,
+		validator: validator.New(),
+		storage:   storage,
 	}
 }
 
@@ -89,7 +87,8 @@ func (u *Usecase) CreateEvent(event CreateEventRequest) CreateEventResponse {
 }
 
 func (u *Usecase) Book(eventID string, userID string) BookResponse {
-	var booking Booking
+	var bookingID string
+	var paymentDeadline time.Time
 	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
 		event, err := tx.GetEvent(eventID)
 		if err != nil {
@@ -101,7 +100,8 @@ func (u *Usecase) Book(eventID string, userID string) BookResponse {
 		if event.Date.Before(time.Now()) {
 			return errors.New("event is in the past")
 		}
-		booking, err = tx.Book(eventID, userID)
+		paymentDeadline = time.Now().Add(event.PaymentTTL)
+		bookingID, err = tx.Book(eventID, userID, paymentDeadline)
 		if err != nil {
 			return err
 		}
@@ -114,10 +114,10 @@ func (u *Usecase) Book(eventID string, userID string) BookResponse {
 	}
 
 	notif := DelayedNotification{
-		SendAt:     &booking.PaymentDeadline,
+		SendAt:     &paymentDeadline,
 		TelegramID: userID,
 		EventID:    eventID,
-		BookingID:  booking.ID,
+		BookingID:  bookingID,
 	}
 
 	if err := u.nfs.SendDelayed(notif); err != nil {
@@ -125,9 +125,9 @@ func (u *Usecase) Book(eventID string, userID string) BookResponse {
 	}
 
 	return BookResponse{
-		ID:              booking.ID,
+		ID:              bookingID,
 		Status:          BookingStatusPending,
-		PaymentDeadline: booking.PaymentDeadline,
+		PaymentDeadline: paymentDeadline,
 	}
 }
 

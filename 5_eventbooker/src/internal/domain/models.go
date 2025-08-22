@@ -52,11 +52,12 @@ type ConfirmResponse struct {
 
 // EventDetailsResponse is the response body for getting event details.
 type EventDetailsResponse struct {
-	Name      string    `json:"name,omitempty"`
-	Available int       `json:"available,omitempty"`
-	Capacity  int       `json:"capacity,omitempty"`
-	Date      time.Time `json:"date,omitempty"`
-	Error     string    `json:"error,omitempty"`
+	Name       string        `json:"name,omitempty"`
+	Available  int           `json:"available,omitempty"`
+	Capacity   int           `json:"capacity,omitempty"`
+	Date       time.Time     `json:"date,omitempty"`
+	PaymentTTL time.Duration `json:"payment_ttl,omitempty"`
+	Error      string        `json:"error,omitempty"`
 }
 
 // Booking is the value object for a booking cache.
