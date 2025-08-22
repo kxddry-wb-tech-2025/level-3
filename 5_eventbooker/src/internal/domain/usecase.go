@@ -164,6 +164,10 @@ func (u *Usecase) Confirm(eventID, bookingID string) ConfirmResponse {
 		}
 	}
 
+	if err := u.nfs.CancelDelayed(bookingID); err != nil {
+		zlog.Logger.Err(err).Msg("failed to cancel delayed notification")
+	}
+
 	return ConfirmResponse{
 		Status: status,
 	}
