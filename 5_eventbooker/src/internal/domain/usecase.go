@@ -129,3 +129,42 @@ func (u *Usecase) Book(eventID string, userID string) BookResponse {
 		PaymentDeadline: booking.PaymentDeadline,
 	}
 }
+
+func (u *Usecase) Confirm(eventID, bookingID string) ConfirmResponse {
+	var status string
+	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
+		booking, err := tx.GetBooking(bookingID)
+		if err != nil {
+			return err
+		}
+		if booking.EventID != eventID {
+			return errors.New("booking does not belong to the event")
+		}
+		switch booking.Status {
+		case BookingStatusCancelled:
+			return errors.New("booking is cancelled")
+		case BookingStatusConfirmed:
+			return errors.New("booking is already confirmed")
+		case BookingStatusExpired:
+			return errors.New("booking is expired")
+		case BookingStatusPending:
+		default:
+			zlog.Logger.Err(errors.New("invalid booking status")).Msg("invalid booking status")
+			panic(errors.New("invalid booking status in the database"))
+		}
+		status, err = tx.Confirm(bookingID)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return ConfirmResponse{
+			Error: err.Error(),
+		}
+	}
+
+	return ConfirmResponse{
+		Status: status,
+	}
+}
