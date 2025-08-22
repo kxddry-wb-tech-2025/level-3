@@ -2,41 +2,53 @@ package domain
 
 import "time"
 
-type Error struct {
+// I know that applying omitempty to all fields is not a good practice, but it's better than returning an interface{}.
+
+// CreateEventRequest is the request body for creating an event.
+type CreateEventRequest struct {
+	Date     time.Time `json:"date,omitempty" validate:"required"`
+	Capacity int       `json:"capacity,omitempty" validate:"required,min=1,max=2147483647"`
+	Name     string    `json:"name,omitempty" validate:"required,min=1,max=255"`
+	Error    string    `json:"error,omitempty"`
+}
+
+// CreateEventResponse is the response body for creating an event.
+type CreateEventResponse struct {
+	ID    string `json:"id,omitempty" validate:"required,uuid"`
 	Error string `json:"error,omitempty"`
 }
 
-type CreateEventRequest struct {
-	Date     time.Time `json:"date"`
-	Capacity int       `json:"capacity" validate:"required,min=1"`
-	Name     string    `json:"name" validate:"required,min=1"`
-}
-
-type CreateEventResponse struct {
-	ID string `json:"id"`
-}
-
+// BookRequest is the request body for booking an event.
 type BookRequest struct {
-	UserID string `json:"user_id" validate:"required,uuid"`
+	UserID string `json:"user_id,omitempty" validate:"required,uuid"`
+	Error  string `json:"error,omitempty"`
 }
 
+// BookResponse is the response body for booking an event.
 type BookResponse struct {
-	ID              string    `json:"id"`
-	Status          string    `json:"status"`
-	PaymentDeadline time.Time `json:"payment_deadline" format:"rfc3339"`
+	ID              string    `json:"id,omitempty"`
+	Status          string    `json:"status,omitempty"`
+	PaymentDeadline time.Time `json:"payment_deadline,omitempty" format:"rfc3339"`
+	Error           string    `json:"error,omitempty"`
 }
 
+// ConfirmRequest is the request body for confirming a booking.
 type ConfirmRequest struct {
-	BookingID string `json:"booking_id" validate:"required,uuid"`
+	BookingID string `json:"booking_id,omitempty" validate:"required,uuid"`
+	Error     string `json:"error,omitempty"`
 }
 
+// ConfirmResponse is the response body for confirming a booking.
 type ConfirmResponse struct {
-	Status string `json:"status"`
+	Status string `json:"status,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
+// EventDetailsResponse is the response body for getting event details.
 type EventDetailsResponse struct {
-	Name      string    `json:"name"`
-	Available int       `json:"available"`
-	Capacity  int       `json:"capacity"`
-	Date      time.Time `json:"date"`
+	Name      string    `json:"name,omitempty"`
+	Available int       `json:"available,omitempty"`
+	Capacity  int       `json:"capacity,omitempty"`
+	Date      time.Time `json:"date,omitempty"`
+	Error     string    `json:"error,omitempty"`
 }

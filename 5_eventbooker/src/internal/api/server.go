@@ -1,12 +1,19 @@
 package api
 
 import (
+	"eventbooker/src/internal/domain"
+
 	"github.com/gin-gonic/gin"
 	"github.com/kxddry/wbf/ginext"
 )
 
 type Server struct {
 	r *ginext.Engine
+}
+
+type Storage interface {
+	CreateEvent(event *domain.CreateEventRequest) (string, error)
+	Book(eventID string, userID string)
 }
 
 func NewServer() *Server {
