@@ -9,6 +9,7 @@ import (
 	cfg "github.com/kxddry/wbf/config"
 )
 
+// Config is the configuration for the event booking service.
 type Config struct {
 	Srv         Server
 	BookTimeout time.Duration
@@ -16,15 +17,18 @@ type Config struct {
 	Storage     Storage
 }
 
+// Server is the configuration for the server.
 type Server struct {
 	Addr string
 }
 
+// Storage is the configuration for the storage.
 type Storage struct {
 	MasterDSN string
 	SlaveDSNs []string
 }
 
+// Update updates the configuration from a file.
 func (c *Config) Update(file string) error {
 	if c == nil {
 		c = &Config{}
