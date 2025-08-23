@@ -73,7 +73,7 @@ func RegisterRoutes(ctx context.Context, r *ginext.Engine, store *redis.Storage)
 		c.JSON(http.StatusAccepted, n)
 	})
 
-	r.GET("/notify/:id", func(c *gin.Context) {
+	r.GET("/notify/:id", func(c *ginext.Context) {
 		id := c.Param("id")
 		n, err := store.GetNotification(ctx, id)
 		if err != nil {
@@ -87,7 +87,7 @@ func RegisterRoutes(ctx context.Context, r *ginext.Engine, store *redis.Storage)
 		c.JSON(http.StatusOK, n)
 	})
 
-	r.DELETE("/notify/:id", func(c *gin.Context) {
+	r.DELETE("/notify/:id", func(c *ginext.Context) {
 		id := c.Param("id")
 		if err := store.CancelNotification(ctx, id); err != nil {
 			zlog.Logger.Error().Err(err).Str("id", id).Msg("cancel failed")

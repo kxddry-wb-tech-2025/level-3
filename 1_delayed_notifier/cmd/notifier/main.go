@@ -22,6 +22,9 @@ import (
 )
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	zlog.Init()
 	log := &zlog.Logger
 
@@ -58,7 +61,7 @@ func main() {
 		Password: cfg.GetString("redis.password"),
 		DB:       redisDB,
 	}
-	redisStore, err := redis.NewStorage(context.Background(), redisCfg)
+	redisStore, err := redis.NewStorage(ctx, redisCfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to init redis storage")
 	}
@@ -93,10 +96,6 @@ func main() {
 		token,
 		time.Duration(tgTimeoutSec)*time.Second,
 	)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	scheduler := worker.NewScheduler(redisStore, rmq)
 	consumer := worker.NewConsumer(redisStore, rmq, telegram)
 
