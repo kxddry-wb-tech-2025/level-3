@@ -64,15 +64,15 @@ func (u *Usecase) cancelBooking(ctx context.Context, bookingID string) error {
 			}
 		}
 
+		// set booking status to expired
+		if err = tx.BookingSetStatus(ctx, bookingID, domain.BookingStatusExpired); err != nil {
+			return err
+		}
 		// set booking decremented to false
 		if err = tx.BookingSetDecremented(ctx, bookingID, false); err != nil {
 			return err
 		}
 
-		// set booking status to expired
-		if err = tx.BookingSetStatus(ctx, bookingID, domain.BookingStatusExpired); err != nil {
-			return err
-		}
 		return nil
 	})
 }
