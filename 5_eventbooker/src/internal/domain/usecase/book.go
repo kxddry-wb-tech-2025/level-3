@@ -28,23 +28,41 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 		if err != nil {
 			return err
 		}
+
+		notif := domain.DelayedNotification{
+			SendAt:     &paymentDeadline,
+			TelegramID: userID,
+			EventID:    eventID,
+			BookingID:  bookingID,
+		}
+
+		if err := u.nfs.SendDelayed(notif); err != nil {
+			zlog.Logger.Err(err).Msg("failed to send delayed notification")
+		} else {
+			// but why here?
+			// If the notification does not get sent, we cannot increment the available capacity later on.
+			// So in that case, we should decrement it in the confirm usecase.
+			// How do we do that? I don't know.
+			// We should probably store a column in the database to track whether the notification was sent or not.
+			// If it was not sent, we can decrement the available capacity on confirm.
+			// If it was sent, we decrement it here.
+			event.Available--
+			// we set decremented to true here because we know that the notification was sent.
+			if err = tx.BookingSetDecremented(ctx, bookingID, true); err != nil {
+				return err
+			}
+			// we only update the event afterwards because we prioritize the event availability over the booking decrement.
+			if err = tx.UpdateEvent(ctx, event); err != nil {
+				return err
+			}
+
+		}
 		return nil
 	})
 	if err != nil {
 		return domain.BookResponse{
 			Error: err.Error(),
 		}
-	}
-
-	notif := domain.DelayedNotification{
-		SendAt:     &paymentDeadline,
-		TelegramID: userID,
-		EventID:    eventID,
-		BookingID:  bookingID,
-	}
-
-	if err := u.nfs.SendDelayed(notif); err != nil {
-		zlog.Logger.Err(err).Msg("failed to send delayed notification")
 	}
 
 	return domain.BookResponse{

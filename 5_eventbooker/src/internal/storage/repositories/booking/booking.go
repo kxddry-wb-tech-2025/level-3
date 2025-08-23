@@ -29,15 +29,16 @@ CREATE TABLE bookings (
 	id UUID PRIMARY KEY,
 	event_id UUID NOT NULL,
 	user_id UUID NOT NULL,
+	decremented BOOLEAN NOT NULL DEFAULT FALSE,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	payment_deadline TIMESTAMP NOT NULL,
 )
 */
 
-func (r *BookingRepository) Book(ctx context.Context, eventID, userID string, paymentDeadline time.Time) (string, error) {
+func (r *BookingRepository) Book(ctx context.Context, eventID, userID string, paymentDeadline time.Time, decremented bool) (string, error) {
 	var id string
-	err := r.db.Master.QueryRowContext(ctx, `INSERT INTO bookings (event_id, user_id, payment_deadline) VALUES ($1, $2, $3) RETURNING id`, eventID, userID, paymentDeadline).Scan(&id)
+	err := r.db.Master.QueryRowContext(ctx, `INSERT INTO bookings (event_id, user_id, payment_deadline, decremented) VALUES ($1, $2, $3, $4) RETURNING id`, eventID, userID, paymentDeadline, decremented).Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", storage.ErrEventNotFound
@@ -46,6 +47,21 @@ func (r *BookingRepository) Book(ctx context.Context, eventID, userID string, pa
 	}
 
 	return id, nil
+}
+
+func (r *BookingRepository) BookingSetDecremented(ctx context.Context, bookingID string, decremented bool) error {
+	res, err := r.db.ExecContext(ctx, `UPDATE bookings SET decremented = $1 WHERE id = $2`, decremented, bookingID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return storage.ErrBookingNotFound
+	}
+	return nil
 }
 
 func (r *BookingRepository) GetBooking(ctx context.Context, bookingID string) (domain.Booking, error) {
