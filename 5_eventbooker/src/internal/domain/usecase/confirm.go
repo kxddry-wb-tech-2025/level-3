@@ -13,6 +13,7 @@ import (
 // It is responsible for confirming a booking and decrementing the event's available capacity.
 func (u *Usecase) Confirm(eventID, bookingID string) domain.ConfirmResponse {
 	var status string
+	var notificationID string
 	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
 		// get event
 		_, err := tx.GetEvent(ctx, eventID)
@@ -51,6 +52,8 @@ func (u *Usecase) Confirm(eventID, bookingID string) domain.ConfirmResponse {
 			return err
 		}
 
+		notificationID, _ = tx.GetNotificationID(ctx, bookingID)
+
 		return nil
 	})
 	if err != nil {
@@ -60,7 +63,7 @@ func (u *Usecase) Confirm(eventID, bookingID string) domain.ConfirmResponse {
 	}
 
 	// cancel delayed notification
-	if err := u.nf.CancelDelayed(bookingID); err != nil {
+	if err := u.nf.CancelNotification(notificationID); err != nil {
 		zlog.Logger.Err(err).Msg("failed to cancel delayed notification")
 	}
 

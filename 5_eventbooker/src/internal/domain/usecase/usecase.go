@@ -25,13 +25,15 @@ type BookingRepository interface {
 
 // NotificationRepository is the interface for the notification repository.
 type NotificationRepository interface {
-	Add(ctx context.Context, notif domain.DelayedNotification) error
+	AddNotification(ctx context.Context, notif domain.DelayedNotification) error
+	GetNotificationID(ctx context.Context, bookingID string) (string, error)
 }
 
 // Tx is the interface for the transactions.
 type Tx interface {
 	EventRepository
 	BookingRepository
+	NotificationRepository
 	Commit() error
 	Rollback() error
 }
@@ -43,8 +45,8 @@ type TxManager interface {
 
 // NotificationService is the interface for the notification service.
 type NotificationService interface {
-	SendDelayed(notif domain.DelayedNotification) error
-	CancelDelayed(bookingID string) error
+	SendNotification(notif domain.DelayedNotification) (string, error)
+	CancelNotification(notificationID string) error
 }
 
 // CancellationService is the interface for the cancellation service.
