@@ -50,7 +50,9 @@ func (c *Consumer) Run(ctx context.Context) (<-chan models.Notification, error) 
 		return nil, err
 	}
 	out := make(chan models.Notification, 100)
+
 	go func() {
+		defer close(out)
 		for {
 			select {
 			case <-ctx.Done():
