@@ -1,28 +1,25 @@
 package api
 
 import (
+	"context"
 	"eventbooker/src/internal/domain"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/kxddry/wbf/ginext"
 )
 
 type Usecase interface {
-	CreateEvent(event *domain.CreateEventRequest) domain.CreateEventResponse
-	Book(req *domain.BookRequest) domain.BookResponse
-	Confirm(req *domain.ConfirmRequest) domain.ConfirmResponse
-	GetEvent(id string) domain.EventDetailsResponse
+	CreateEvent(ctx context.Context, event domain.CreateEventRequest) domain.CreateEventResponse
+	GetEvent(ctx context.Context, eventID string) domain.EventDetailsResponse
+	Book(ctx context.Context, eventID string, userID string) domain.BookResponse
+	Confirm(ctx context.Context, bookingID string) domain.ConfirmResponse
 }
 
 type Server struct {
 	r  *ginext.Engine
 	uc Usecase
-}
-
-type Storage interface {
-	CreateEvent(event *domain.CreateEventRequest) (string, error)
-	Book(eventID string, userID string)
 }
 
 func NewServer(uc Usecase) *Server {
@@ -53,7 +50,7 @@ func (s *Server) registerRoutes() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		res := s.uc.CreateEvent(&req)
+		res := s.uc.CreateEvent(c.Request.Context(), req)
 		if res.Error != "" {
 			c.JSON(http.StatusBadRequest, res)
 			return
@@ -63,7 +60,7 @@ func (s *Server) registerRoutes() {
 
 	r.GET("/events/:id", func(c *ginext.Context) {
 		id := c.Param("id")
-		res := s.uc.GetEvent(id)
+		res := s.uc.GetEvent(c.Request.Context(), id)
 		if res.Error != "" {
 			c.JSON(http.StatusBadRequest, res)
 			return
@@ -77,7 +74,13 @@ func (s *Server) registerRoutes() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		res := s.uc.Book(&req)
+		eventID := c.Param("id")
+		// validate event ID
+		if _, err := uuid.Parse(eventID); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event ID"})
+			return
+		}
+		res := s.uc.Book(c.Request.Context(), eventID, req.UserID)
 		if res.Error != "" {
 			c.JSON(http.StatusBadRequest, res)
 			return
@@ -91,7 +94,12 @@ func (s *Server) registerRoutes() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		res := s.uc.Confirm(&req)
+		eventID := c.Param("id")
+		if _, err := uuid.Parse(eventID); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event ID"})
+			return
+		}
+		res := s.uc.Confirm(c.Request.Context(), req.BookingID)
 		if res.Error != "" {
 			c.JSON(http.StatusBadRequest, res)
 			return
