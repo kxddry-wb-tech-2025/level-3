@@ -2,20 +2,17 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"eventbooker/src/internal/domain"
-	"eventbooker/src/internal/storage"
 )
 
+// GetEvent is the set of actions required to run the get event process.
+// It is responsible for getting an event and returning the event details.
 func (u *Usecase) GetEvent(ctx context.Context, eventID string) domain.EventDetailsResponse {
 	var event domain.Event
 	err := u.storage.Do(ctx, func(ctx context.Context, tx Tx) error {
 		var err error
 		event, err = tx.GetEvent(ctx, eventID)
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				return errors.New("event not found")
-			}
 			return err
 		}
 		return nil

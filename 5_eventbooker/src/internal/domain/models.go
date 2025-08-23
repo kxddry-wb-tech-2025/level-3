@@ -82,13 +82,14 @@ type Event struct {
 	PaymentTTL time.Duration `json:"payment_ttl,omitempty"`
 }
 
+// BookingStatus is the status of a booking.
 const (
 	BookingStatusPending   = "pending"
 	BookingStatusConfirmed = "confirmed"
-	BookingStatusCancelled = "cancelled"
 	BookingStatusExpired   = "expired"
 )
 
+// CancelBookingEvent is the value object for a cancel booking event.
 type CancelBookingEvent struct {
 	NotificationID string `json:"notification_id"`
 	BookingID      string `json:"booking_id"`

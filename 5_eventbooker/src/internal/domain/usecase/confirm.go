@@ -4,31 +4,38 @@ import (
 	"context"
 	"errors"
 	"eventbooker/src/internal/domain"
-	"eventbooker/src/internal/storage"
+	"time"
 
 	"github.com/kxddry/wbf/zlog"
 )
 
+// Confirm is the set of actions required to run the confirmation process.
+// It is responsible for confirming a booking and decrementing the event's available capacity.
 func (u *Usecase) Confirm(eventID, bookingID string) domain.ConfirmResponse {
 	var status string
 	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
+		// get event
 		_, err := tx.GetEvent(ctx, eventID)
 		if err != nil {
-			if errors.Is(err, storage.ErrEventNotFound) {
-				return errors.New("event not found")
-			}
 			return err
 		}
+		// get booking
 		booking, err := tx.GetBooking(ctx, bookingID)
 		if err != nil {
 			return err
 		}
+		// check if booking belongs to the event
 		if booking.EventID != eventID {
 			return errors.New("booking does not belong to the event")
 		}
+
+		// check if booking payment deadline has passed
+		if booking.PaymentDeadline.Before(time.Now()) {
+			return errors.New("booking payment deadline has passed")
+		}
+
+		// check if booking is already confirmed or expired
 		switch booking.Status {
-		case domain.BookingStatusCancelled:
-			return errors.New("booking is cancelled")
 		case domain.BookingStatusConfirmed:
 			return errors.New("booking is already confirmed")
 		case domain.BookingStatusExpired:
@@ -38,6 +45,7 @@ func (u *Usecase) Confirm(eventID, bookingID string) domain.ConfirmResponse {
 			zlog.Logger.Err(errors.New("invalid booking status")).Msg("invalid booking status")
 			panic(errors.New("invalid booking status in the database"))
 		}
+		// confirm booking
 		status, err = tx.Confirm(ctx, bookingID)
 		if err != nil {
 			return err
@@ -51,6 +59,7 @@ func (u *Usecase) Confirm(eventID, bookingID string) domain.ConfirmResponse {
 		}
 	}
 
+	// cancel delayed notification
 	if err := u.nf.CancelDelayed(bookingID); err != nil {
 		zlog.Logger.Err(err).Msg("failed to cancel delayed notification")
 	}
