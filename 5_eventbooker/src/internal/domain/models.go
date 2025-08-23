@@ -69,6 +69,7 @@ type Booking struct {
 	EventID         string    `json:"event_id,omitempty"`
 	Status          string    `json:"status,omitempty"`
 	PaymentDeadline time.Time `json:"payment_deadline,omitempty" format:"rfc3339"`
+	Decremented     bool      `json:"decremented,omitempty"`
 }
 
 // Event is the value object for an event.
