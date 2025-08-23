@@ -115,12 +115,13 @@ func main() {
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to init kafka producer")
 		}
+		defer kfk.Close()
 		notifier := servicenotifier.NewNotifier(kfk)
 		go notifier.Notify(ctx, out)
 	} else {
 		go func() {
-			for range out {
-				// discard channel notifications
+			for n := range out {
+				log.Info().Msgf("discarding notification: %+v", n)
 			}
 		}()
 	}
