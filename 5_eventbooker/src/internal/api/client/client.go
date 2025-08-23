@@ -15,18 +15,15 @@ import (
 	"github.com/kxddry/wbf/zlog"
 )
 
-var message = func(bookingID, eventID string) string {
-	return fmt.Sprintf("Your booking %s for event %s has been canceled due to not paying in time. \nPlease contact support if you believe this is an error.", bookingID, eventID)
-}
-
 // Client is the client for the event booking service.
 type Client struct {
 	client *http.Client
 	addr   string
-	mp     *cache.Cache
+	mp     *cache.Cache // should use postgres instead
 }
 
 // NewClient creates a new client.
+// TODO: change this entire logic.
 // It uses a cache with the given TTL.
 // It is thread-safe.
 //
@@ -34,7 +31,6 @@ type Client struct {
 //
 // Do not forget to call Stop() on the client when you're done with it.
 // Make sure that limit and TTL are enough to fit all your users.
-// Sure, we could use Postgres to store Telegram IDs and Booking IDs, but it's a bit too much for this project.
 func NewClient(addr string, cacheTTL time.Duration, cacheLimit int) *Client {
 	return &Client{
 		client: http.DefaultClient,
@@ -49,7 +45,7 @@ func (c *Client) SendDelayed(notif domain.DelayedNotification) error {
 		SendAt:    notif.SendAt,
 		Channel:   "telegram",
 		Recipient: notif.TelegramID,
-		Message:   message(notif.BookingID, notif.EventID),
+		Message:   fmt.Sprintf(domain.MessageCancelBookingTemplate, notif.BookingID, notif.EventID),
 	}
 
 	js, err := json.Marshal(req)
