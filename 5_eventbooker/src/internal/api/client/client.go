@@ -3,10 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"eventbooker/src/internal/domain"
-	"eventbooker/src/internal/storage"
-	"eventbooker/src/internal/storage/cache"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,7 +16,6 @@ import (
 type Client struct {
 	client *http.Client
 	addr   string
-	mp     *cache.Cache // should use postgres instead
 }
 
 // NewClient creates a new client.
@@ -35,12 +31,12 @@ func NewClient(addr string, cacheTTL time.Duration, cacheLimit int) *Client {
 	return &Client{
 		client: http.DefaultClient,
 		addr:   addr,
-		mp:     cache.NewCache(cacheTTL, cacheLimit),
 	}
 }
 
-// SendDelayed sends a delayed notification at a specific time.
-func (c *Client) SendDelayed(notif domain.DelayedNotification) error {
+// SendNotification sends a notification at a specific time.
+// Returns the notification ID.
+func (c *Client) SendNotification(notif domain.DelayedNotification) (string, error) {
 	req := SendNotificationRequest{
 		SendAt:    notif.SendAt,
 		Channel:   "telegram",
@@ -50,52 +46,35 @@ func (c *Client) SendDelayed(notif domain.DelayedNotification) error {
 
 	js, err := json.Marshal(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	resp, err := c.client.Post(c.addr+"/notify", "application/json", bytes.NewBuffer(js))
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != SendSuccess {
-		return fmt.Errorf("failed to send notification: %s", resp.Status)
+		return "", fmt.Errorf("failed to send notification: %s", resp.Status)
 	}
 	slice, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var respBody SendNotificationResponse
 	err = json.Unmarshal(slice, &respBody)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	// save notificationID to cache
-	c.mp.Set(notif.BookingID, respBody.ID)
-
-	return nil
+	return respBody.ID, nil
 }
 
-// CancelDelayed cancels a delayed notification.
-func (c *Client) CancelDelayed(bookingID string) error {
-	recipient, err := c.mp.Get(bookingID)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			zlog.Logger.Err(err).Msg("DEVELOPERS MISTAKE: recipient not found in cache")
-		}
-		return err
-	}
-
-	str, ok := recipient.(string)
-	if !ok {
-		zlog.Logger.Err(err).Msg("DEVELOPERS MISTAKE: recipient is not a string")
-		return fmt.Errorf("recipient is not a string")
-	}
-
+// CancelNotification cancels a notification.
+func (c *Client) CancelNotification(notificationID string) error {
 	req := CancelNotificationRequest{
-		ID: str,
+		ID: notificationID,
 	}
 
 	js, err := json.Marshal(req)
@@ -103,7 +82,7 @@ func (c *Client) CancelDelayed(bookingID string) error {
 		return err
 	}
 
-	reqHt, err := http.NewRequest(http.MethodDelete, c.addr+"/notify/"+bookingID, bytes.NewReader(js))
+	reqHt, err := http.NewRequest(http.MethodDelete, c.addr+"/notify/"+notificationID, bytes.NewReader(js))
 	if err != nil {
 		return err
 	}
@@ -121,8 +100,6 @@ func (c *Client) CancelDelayed(bookingID string) error {
 		}
 		return fmt.Errorf("failed to cancel notification: %s", resp.Status)
 	}
-
-	c.mp.Remove(bookingID)
 
 	return nil
 }
