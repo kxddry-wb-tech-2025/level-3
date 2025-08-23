@@ -45,16 +45,18 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 		}
 
 		// send delayed notification
-		if err := u.nf.SendDelayed(notif); err != nil {
+		if notificationID, err := u.nf.SendNotification(notif); err != nil {
 			zlog.Logger.Err(err).Msg("failed to send delayed notification")
 		} else {
-			// decrement event available capacity if notification was sent
 			event.Available--
+			if err = tx.UpdateEvent(ctx, event); err != nil {
+				return err
+			}
 			if err = tx.BookingSetDecremented(ctx, bookingID, true); err != nil {
 				return err
 			}
-			// we only update the event afterwards because we prioritize the event availability over the booking decrement.
-			if err = tx.UpdateEvent(ctx, event); err != nil {
+			notif.NotificationID = notificationID
+			if err = tx.AddNotification(ctx, notif); err != nil {
 				return err
 			}
 		}

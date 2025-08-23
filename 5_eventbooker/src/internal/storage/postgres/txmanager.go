@@ -68,7 +68,15 @@ func (t *tx) BookingSetStatus(ctx context.Context, bookingID string, status stri
 	return t.repos.BookingRepository.BookingSetStatus(storage.WithTx(ctx, t.tx), bookingID, status)
 }
 
-func (t *tx) Commit() error { return t.tx.Commit() }
+func (t *tx) AddNotification(ctx context.Context, notif domain.DelayedNotification) error {
+	return t.repos.NotificationRepository.AddNotification(storage.WithTx(ctx, t.tx), notif)
+}
+
+func (t *tx) GetNotificationID(ctx context.Context, bookingID string) (string, error) {
+	return t.repos.NotificationRepository.GetNotificationID(storage.WithTx(ctx, t.tx), bookingID)
+}
+
+func (t *tx) Commit() error   { return t.tx.Commit() }
 func (t *tx) Rollback() error { return t.tx.Rollback() }
 
 // Do runs a function within a DB transaction, committing on success and rolling back on error.

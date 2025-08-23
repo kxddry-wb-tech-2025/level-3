@@ -34,8 +34,8 @@ CREATE TABLE notifications (
 )
 */
 
-// Add is the method for adding a notification to the database.
-func (r *NotificationRepository) Add(ctx context.Context, notif domain.DelayedNotification) error {
+// AddNotification is the method for adding a notification to the database.
+func (r *NotificationRepository) AddNotification(ctx context.Context, notif domain.DelayedNotification) error {
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		if err := tx.QueryRowContext(ctx, `INSERT INTO notifications (id, user_id, event_id, booking_id, send_at) VALUES ($1, $2, $3, $4, $5)`,
 			notif.NotificationID, notif.TelegramID, notif.EventID, notif.BookingID, notif.SendAt).Err(); err != nil {
@@ -49,4 +49,20 @@ func (r *NotificationRepository) Add(ctx context.Context, notif domain.DelayedNo
 		return err
 	}
 	return nil
+}
+
+// GetNotificationID is the method for getting a notification ID from the database by booking ID.
+func (r *NotificationRepository) GetNotificationID(ctx context.Context, bookingID string) (string, error) {
+	var id string
+	if tx, ok := storage.TxFromContext(ctx); ok {
+		if err := tx.QueryRowContext(ctx, `SELECT id FROM notifications WHERE booking_id = $1`, bookingID).Scan(&id); err != nil {
+			return "", err
+		}
+		return id, nil
+	}
+	err := r.db.Master.QueryRowContext(ctx, `SELECT id FROM notifications WHERE booking_id = $1`, bookingID).Scan(&id)
+	if err != nil {
+		return "", err
+	}
+	return id, nil
 }
