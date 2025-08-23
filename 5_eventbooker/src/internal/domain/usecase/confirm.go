@@ -12,7 +12,7 @@ import (
 func (u *Usecase) Confirm(eventID, bookingID string) domain.ConfirmResponse {
 	var status string
 	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
-		event, err := tx.GetEvent(ctx, eventID)
+		_, err := tx.GetEvent(ctx, eventID)
 		if err != nil {
 			if errors.Is(err, storage.ErrEventNotFound) {
 				return errors.New("event not found")
@@ -43,12 +43,6 @@ func (u *Usecase) Confirm(eventID, bookingID string) domain.ConfirmResponse {
 			return err
 		}
 
-		// decrement the available capacity on confirmation
-		// I know its better to use it during booking, but I'm too lazy to change the architecture completely
-		event.Available--
-		if err = tx.UpdateEvent(ctx, event); err != nil {
-			return err
-		}
 		return nil
 	})
 	if err != nil {
