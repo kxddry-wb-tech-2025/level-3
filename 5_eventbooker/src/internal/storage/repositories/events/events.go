@@ -37,6 +37,13 @@ CREATE TABLE events (
 
 func (r *EventRepository) CreateEvent(ctx context.Context, event domain.CreateEventRequest) (string, error) {
 	var id string
+	if tx, ok := storage.TxFromContext(ctx); ok {
+		err := tx.QueryRowContext(ctx, `INSERT INTO events (name, capacity, date, payment_ttl) VALUES ($1, $2, $3, $4) RETURNING id`, event.Name, event.Capacity, event.Date, event.PaymentTTL).Scan(&id)
+		if err != nil {
+			return "", err
+		}
+		return id, nil
+	}
 	err := r.db.Master.QueryRowContext(ctx, `INSERT INTO events (name, capacity, date, payment_ttl) VALUES ($1, $2, $3, $4) RETURNING id`, event.Name, event.Capacity, event.Date, event.PaymentTTL).Scan(&id)
 	if err != nil {
 		return "", err
@@ -45,6 +52,20 @@ func (r *EventRepository) CreateEvent(ctx context.Context, event domain.CreateEv
 }
 
 func (r *EventRepository) UpdateEvent(ctx context.Context, event domain.Event) error {
+	if tx, ok := storage.TxFromContext(ctx); ok {
+		res, err := tx.ExecContext(ctx, `UPDATE events SET name = $1, capacity = $2, date = $3, payment_ttl = $4 WHERE id = $5`, event.Name, event.Capacity, event.Date, event.PaymentTTL, event.ID)
+		if err != nil {
+			return err
+		}
+		rowsAffected, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if rowsAffected == 0 {
+			return storage.ErrEventNotFound
+		}
+		return nil
+	}
 	res, err := r.db.ExecContext(ctx, `UPDATE events SET name = $1, capacity = $2, date = $3, payment_ttl = $4 WHERE id = $5`, event.Name, event.Capacity, event.Date, event.PaymentTTL, event.ID)
 	if err != nil {
 		return err
@@ -60,20 +81,25 @@ func (r *EventRepository) UpdateEvent(ctx context.Context, event domain.Event) e
 }
 
 func (r *EventRepository) GetEvent(ctx context.Context, id string) (domain.Event, error) {
-	var event domain.Event
-	res, err := r.db.QueryContext(ctx, `SELECT name, capacity, date, payment_ttl FROM events WHERE id = $1`, id)
+	var rows *sql.Rows
+	var err error
+	if tx, ok := storage.TxFromContext(ctx); ok {
+		rows, err = tx.QueryContext(ctx, `SELECT name, capacity, date, payment_ttl FROM events WHERE id = $1`, id)
+	} else {
+		rows, err = r.db.QueryContext(ctx, `SELECT name, capacity, date, payment_ttl FROM events WHERE id = $1`, id)
+	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.Event{}, storage.ErrEventNotFound
 		}
 		return domain.Event{}, err
 	}
-	defer res.Close()
-	if !res.Next() {
+	defer rows.Close()
+	if !rows.Next() {
 		return domain.Event{}, storage.ErrEventNotFound
 	}
-	err = res.Scan(&event.Name, &event.Capacity, &event.Date, &event.PaymentTTL)
-	if err != nil {
+	var event domain.Event
+	if err = rows.Scan(&event.Name, &event.Capacity, &event.Date, &event.PaymentTTL); err != nil {
 		return domain.Event{}, err
 	}
 	event.ID = id
