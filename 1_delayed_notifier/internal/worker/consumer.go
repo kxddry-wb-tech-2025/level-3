@@ -43,13 +43,13 @@ func NewConsumer(store storageAccess, q ConsumerQueue, s Sender) *Consumer {
 // Run starts consumption loop until ctx is cancelled.
 // Returns a channel of notifications processed the first time.
 // It might be useful for the metrics for some people. I'm using it for another project.
-func (c *Consumer) Run(ctx context.Context) (<-chan models.Notification, error) {
+func (c *Consumer) Run(ctx context.Context) (<-chan models.NotificationKafka, error) {
 	msgs, err := c.q.Consume(ctx)
 	if err != nil {
 		zlog.Logger.Error().Err(err).Msg("consumer: failed to start consuming")
 		return nil, err
 	}
-	out := make(chan models.Notification, 100)
+	out := make(chan models.NotificationKafka, 100)
 
 	go func() {
 		defer close(out)
@@ -71,7 +71,7 @@ func (c *Consumer) Run(ctx context.Context) (<-chan models.Notification, error) 
 
 // processDelivery processes a delivery and sends the notification to the output channel.
 // the output channel MUST be ready to receive and process notifications.
-func (c *Consumer) processDelivery(ctx context.Context, d models.Delivery, out chan<- models.Notification) {
+func (c *Consumer) processDelivery(ctx context.Context, d models.Delivery, out chan<- models.NotificationKafka) {
 	var n models.Notification
 	if err := json.Unmarshal(d.Body(), &n); err != nil {
 		_ = d.Nack(false)
@@ -82,16 +82,19 @@ func (c *Consumer) processDelivery(ctx context.Context, d models.Delivery, out c
 		_ = d.Ack()
 		return
 	}
+	if n.RetryCount == 0 {
+		select {
+		case <-ctx.Done():
+			return
+		case out <- models.NotificationKafka{
+			NotificationID: n.ID,
+			Message:        n.Message,
+		}:
+		}
+	}
 	// send via sender with short retry strategy; schedule long retry if still failing
 	short := retry.Strategy{Attempts: 3, Delay: 10 * time.Millisecond, Backoff: 2}
 	if err := retry.Do(func() error { return c.sender.Send(ctx, n) }, short); err != nil {
-		if n.RetryCount == 0 {
-			select {
-			case <-ctx.Done():
-				return
-			case out <- n:
-			}
-		}
 		zlog.Logger.Error().Err(err).Str("id", n.ID).Msg("consumer: send failed")
 		n.Status = models.StatusRetrying
 		n.RetryCount++

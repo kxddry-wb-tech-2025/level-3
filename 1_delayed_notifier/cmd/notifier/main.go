@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"delayed-notifier/internal/httpapi"
-	"delayed-notifier/internal/queue"
+	"delayed-notifier/internal/queue/kafka"
+	"delayed-notifier/internal/queue/rabbit"
 	"delayed-notifier/internal/sender/telegram"
+	"delayed-notifier/internal/servicenotifier"
 	"delayed-notifier/internal/storage/redis"
 	"delayed-notifier/internal/worker"
 	"fmt"
@@ -71,14 +73,14 @@ func main() {
 		rabbitPort = "5672"
 	}
 	rp, _ := strconv.Atoi(rabbitPort)
-	rmqCfg := queue.RabbitConfig{
+	rmqCfg := rabbit.RabbitConfig{
 		Host:      cfg.GetString("rabbitmq.host"),
 		Port:      rp,
 		Username:  cfg.GetString("rabbitmq.username"),
 		Password:  cfg.GetString("rabbitmq.password"),
 		QueueName: cfg.GetString("rabbitmq.queue_name"),
 	}
-	rmq, err := queue.NewRabbit(rmqCfg)
+	rmq, err := rabbit.NewRabbit(rmqCfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to init rabbitmq")
 	}
@@ -100,7 +102,28 @@ func main() {
 	consumer := worker.NewConsumer(redisStore, rmq, telegram)
 
 	go scheduler.Run(ctx)
-	go consumer.Run(ctx)
+	out, err := consumer.Run(ctx)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to start consumer")
+	}
+	if os.Getenv("NOTIFY_OTHER_SERVICES") == "true" {
+		broker := cfg.GetString("kafka.broker")
+		if broker == "" {
+			log.Fatal().Msg("kafka broker is not set")
+		}
+		kfk, err := kafka.New(ctx, []string{broker}, cfg.GetString("kafka.topic"))
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to init kafka producer")
+		}
+		notifier := servicenotifier.NewNotifier(kfk)
+		go notifier.Notify(ctx, out)
+	} else {
+		go func() {
+			for range out {
+				// discard channel notifications
+			}
+		}()
+	}
 
 	r := ginext.New()
 

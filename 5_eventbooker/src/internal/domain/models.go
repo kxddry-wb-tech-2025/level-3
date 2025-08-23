@@ -34,10 +34,11 @@ type BookResponse struct {
 // DelayedNotification is the value object for a delayed notification.
 // It is used to send a notification to a user at a specific time.
 type DelayedNotification struct {
-	SendAt     *time.Time
-	TelegramID string
-	EventID    string
-	BookingID  string
+	NotificationID string
+	SendAt         *time.Time
+	TelegramID     string
+	EventID        string
+	BookingID      string
 }
 
 // ConfirmRequest is the request body for confirming a booking.
