@@ -1,4 +1,4 @@
-package postgres
+package txmanager
 
 import (
 	"context"
@@ -17,6 +17,33 @@ import (
 type TxManager struct {
 	db    *dbpg.DB
 	repos *Repositories
+}
+
+func New(masterDSN string, slaveDSNs ...string) (*TxManager, error) {
+	db, err := dbpg.New(masterDSN, slaveDSNs, &dbpg.Options{
+		MaxOpenConns: 100,
+	})
+	if err != nil {
+		return nil, err
+	}
+	eventRepo, err := events.New(masterDSN, slaveDSNs...)
+	if err != nil {
+		return nil, err
+	}
+	bookingRepo, err := booking.New(masterDSN, slaveDSNs...)
+	if err != nil {
+		return nil, err
+	}
+	notificationRepo, err := notifications.New(masterDSN, slaveDSNs...)
+	if err != nil {
+		return nil, err
+	}
+	repos := &Repositories{
+		EventRepository:        eventRepo,
+		BookingRepository:      bookingRepo,
+		NotificationRepository: notificationRepo,
+	}
+	return &TxManager{db: db, repos: repos}, nil
 }
 
 type Repositories struct {
