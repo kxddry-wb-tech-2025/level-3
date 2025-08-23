@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,7 +12,7 @@ import (
 
 func TestPostNotifyTelegramValidation(t *testing.T) {
 	r := ginext.New()
-	RegisterRoutes(r, nil)
+	RegisterRoutes(context.Background(), r, nil)
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
