@@ -27,7 +27,7 @@ func (q *chanQueue) Consume(ctx context.Context) (<-chan models.Delivery, error)
 
 type fakeSender struct{ err error }
 
-func (s *fakeSender) Send(ctx context.Context, n *models.Notification) error { return s.err }
+func (s *fakeSender) Send(ctx context.Context, n models.Notification) error { return s.err }
 
 type fakeStoreC struct {
 	saved   map[string]*models.Notification
@@ -101,7 +101,7 @@ func TestConsumerProcessFailureRetry(t *testing.T) {
 
 type flakySender struct{ fails int }
 
-func (s *flakySender) Send(ctx context.Context, n *models.Notification) error {
+func (s *flakySender) Send(ctx context.Context, n models.Notification) error {
 	if s.fails > 0 {
 		s.fails--
 		return errors.New("temp fail")

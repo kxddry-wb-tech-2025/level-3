@@ -34,7 +34,7 @@ type tgReq struct {
 }
 
 // Send delivers a notification text to the specified chat via Telegram.
-func (t *Sender) Send(ctx context.Context, n *models.Notification) error {
+func (t *Sender) Send(ctx context.Context, n models.Notification) error {
 	if n.Channel != "telegram" {
 		return sender.ErrUnsupportedChannel
 	}
