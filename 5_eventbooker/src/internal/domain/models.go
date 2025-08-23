@@ -87,3 +87,14 @@ const (
 	BookingStatusCancelled = "cancelled"
 	BookingStatusExpired   = "expired"
 )
+
+type CancelBookingEvent struct {
+	NotificationID string `json:"notification_id"`
+	BookingID      string `json:"booking_id"`
+	EventID        string `json:"event_id"`
+}
+
+// MessageCancelBookingTemplate is the template for the message to cancel a booking.
+const (
+	MessageCancelBookingTemplate = "Your booking %s for event %s has been canceled due to not paying in time. \nPlease contact support if you believe this is an error."
+)
