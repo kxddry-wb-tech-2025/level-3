@@ -20,6 +20,7 @@ type BookingRepository interface {
 	GetBooking(ctx context.Context, bookingID string) (domain.Booking, error)
 	Confirm(ctx context.Context, bookingID string) (string, error)
 	BookingSetDecremented(ctx context.Context, bookingID string, decremented bool) error
+	BookingSetStatus(ctx context.Context, bookingID string, status string) error
 }
 
 type NotificationRepository interface {
