@@ -63,3 +63,7 @@ func (p *Producer) Publish(ctx context.Context, n models.NotificationKafka) erro
 	}
 	return p.prod.WriteMessages(ctx, msg)
 }
+
+func (p *Producer) Close() error {
+	return p.prod.Close()
+}
