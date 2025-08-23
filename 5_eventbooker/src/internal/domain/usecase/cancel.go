@@ -4,9 +4,35 @@ import (
 	"context"
 	"errors"
 	"eventbooker/src/internal/domain"
+
+	"github.com/kxddry/wbf/zlog"
 )
 
-func (u *Usecase) CancelBooking(ctx context.Context, bookingID string) error {
+func (u *Usecase) HandleCancellations(ctx context.Context) error {
+	events, err := u.cs.Cancellations(ctx)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event, ok := <-events:
+				if !ok {
+					return
+				}
+				if err := u.cancelBooking(ctx, event.BookingID); err != nil {
+					zlog.Logger.Err(err).Msg("failed to cancel booking")
+				}
+			}
+		}
+	}()
+	return nil
+}
+
+func (u *Usecase) cancelBooking(ctx context.Context, bookingID string) error {
 	return u.storage.Do(ctx, func(ctx context.Context, tx Tx) error {
 		booking, err := tx.GetBooking(ctx, bookingID)
 		if err != nil {
