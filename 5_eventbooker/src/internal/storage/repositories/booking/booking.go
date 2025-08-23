@@ -45,12 +45,27 @@ func (r *BookingRepository) Book(ctx context.Context, eventID, userID string, pa
 		}
 		return "", err
 	}
-
 	return id, nil
 }
 
 func (r *BookingRepository) BookingSetDecremented(ctx context.Context, bookingID string, decremented bool) error {
 	res, err := r.db.ExecContext(ctx, `UPDATE bookings SET decremented = $1 WHERE id = $2`, decremented, bookingID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return storage.ErrBookingNotFound
+	}
+	return nil
+}
+
+func (r *BookingRepository) BookingSetStatus(ctx context.Context, bookingID string, status string) error {
+
+	res, err := r.db.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, status, bookingID)
 	if err != nil {
 		return err
 	}
