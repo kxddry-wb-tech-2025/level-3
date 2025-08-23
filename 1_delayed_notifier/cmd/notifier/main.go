@@ -110,7 +110,7 @@ func main() {
 		httpapi.ServeStatic(r, "/", staticDir)
 	}
 
-	httpapi.RegisterRoutes(r, redisStore)
+	httpapi.RegisterRoutes(ctx, r, redisStore)
 
 	srv := &http.Server{
 		Addr:    addr,

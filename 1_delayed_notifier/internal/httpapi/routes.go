@@ -22,7 +22,7 @@ type createReq struct {
 }
 
 // RegisterRoutes registers HTTP endpoints for creating, querying and cancelling notifications.
-func RegisterRoutes(r *ginext.Engine, store *redis.Storage) {
+func RegisterRoutes(ctx context.Context, r *ginext.Engine, store *redis.Storage) {
 	r.POST("/notify", func(c *ginext.Context) {
 		var req createReq
 		if err := c.BindJSON(&req); err != nil {
@@ -66,7 +66,7 @@ func RegisterRoutes(r *ginext.Engine, store *redis.Storage) {
 			CreatedAt: now,
 			UpdatedAt: now,
 		}
-		if err := store.CreateNotification(context.Background(), n); err != nil {
+		if err := store.CreateNotification(ctx, n); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -75,7 +75,7 @@ func RegisterRoutes(r *ginext.Engine, store *redis.Storage) {
 
 	r.GET("/notify/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		n, err := store.GetNotification(context.Background(), id)
+		n, err := store.GetNotification(ctx, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -89,7 +89,7 @@ func RegisterRoutes(r *ginext.Engine, store *redis.Storage) {
 
 	r.DELETE("/notify/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		if err := store.CancelNotification(context.Background(), id); err != nil {
+		if err := store.CancelNotification(ctx, id); err != nil {
 			zlog.Logger.Error().Err(err).Str("id", id).Msg("cancel failed")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
