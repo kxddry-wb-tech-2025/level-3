@@ -43,6 +43,10 @@ type NotificationService interface {
 	CancelDelayed(bookingID string) error
 }
 
+type CancellationService interface {
+	Cancellations(ctx context.Context) (<-chan domain.CancelBookingEvent, error)
+}
+
 // BookingCache is the interface for the booking cache.
 type BookingCache interface {
 	Add(key string, value domain.Booking, ttl time.Duration) error
@@ -51,15 +55,22 @@ type BookingCache interface {
 
 // Usecase is the usecase for the event booking service.
 type Usecase struct {
-	nfs       NotificationService
+	cs        CancellationService
+	nf        NotificationService
 	validator *validator.Validate
 	storage   TxManager
 }
 
-func NewUsecase(nfs NotificationService, storage TxManager) *Usecase {
-	return &Usecase{
-		nfs:       nfs,
+func New(ctx context.Context, cs CancellationService, nf NotificationService, storage TxManager) (*Usecase, error) {
+	uc := &Usecase{
+		cs:        cs,
+		nf:        nf,
 		validator: validator.New(),
 		storage:   storage,
 	}
+	err := uc.HandleCancellations(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return uc, nil
 }

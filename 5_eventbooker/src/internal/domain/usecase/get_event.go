@@ -9,7 +9,7 @@ import (
 
 func (u *Usecase) GetEvent(ctx context.Context, eventID string) domain.EventDetailsResponse {
 	var event domain.Event
-	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
+	err := u.storage.Do(ctx, func(ctx context.Context, tx Tx) error {
 		var err error
 		event, err = tx.GetEvent(ctx, eventID)
 		if err != nil {

@@ -12,7 +12,7 @@ import (
 func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domain.BookResponse {
 	var bookingID string
 	var paymentDeadline time.Time
-	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
+	err := u.storage.Do(ctx, func(ctx context.Context, tx Tx) error {
 		event, err := tx.GetEvent(ctx, eventID)
 		if err != nil {
 			return err
@@ -36,7 +36,7 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 			BookingID:  bookingID,
 		}
 
-		if err := u.nfs.SendDelayed(notif); err != nil {
+		if err := u.nf.SendDelayed(notif); err != nil {
 			zlog.Logger.Err(err).Msg("failed to send delayed notification")
 		} else {
 			// but why here?
