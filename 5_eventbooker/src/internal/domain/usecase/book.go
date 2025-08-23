@@ -9,21 +9,29 @@ import (
 	"github.com/kxddry/wbf/zlog"
 )
 
+// Book is the set of actions required to run the booking process.
+// It is responsible for booking an event, sending a delayed notification, and decrementing the event's available capacity.
 func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domain.BookResponse {
 	var bookingID string
 	var paymentDeadline time.Time
+	// begin transaction
 	err := u.storage.Do(ctx, func(ctx context.Context, tx Tx) error {
+		// get event
 		event, err := tx.GetEvent(ctx, eventID)
 		if err != nil {
 			return err
 		}
+		// check if event is full
 		if event.Available <= 0 {
 			return errors.New("event is full")
 		}
+		// check if event is in the past
 		if event.Date.Before(time.Now()) {
 			return errors.New("event is in the past")
 		}
+		// set payment deadline
 		paymentDeadline = time.Now().Add(event.PaymentTTL)
+		// book event
 		bookingID, err = tx.Book(ctx, eventID, userID, paymentDeadline)
 		if err != nil {
 			return err
@@ -36,18 +44,12 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 			BookingID:  bookingID,
 		}
 
+		// send delayed notification
 		if err := u.nf.SendDelayed(notif); err != nil {
 			zlog.Logger.Err(err).Msg("failed to send delayed notification")
 		} else {
-			// but why here?
-			// If the notification does not get sent, we cannot increment the available capacity later on.
-			// So in that case, we should decrement it in the confirm usecase.
-			// How do we do that? I don't know.
-			// We should probably store a column in the database to track whether the notification was sent or not.
-			// If it was not sent, we can decrement the available capacity on confirm.
-			// If it was sent, we decrement it here.
+			// decrement event available capacity if notification was sent
 			event.Available--
-			// we set decremented to true here because we know that the notification was sent.
 			if err = tx.BookingSetDecremented(ctx, bookingID, true); err != nil {
 				return err
 			}
@@ -55,7 +57,6 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 			if err = tx.UpdateEvent(ctx, event); err != nil {
 				return err
 			}
-
 		}
 		return nil
 	})
