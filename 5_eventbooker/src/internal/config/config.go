@@ -1,91 +1,58 @@
 package config
 
+// im sorry, i cant do this anymore.
+// i cannot for fucks sake use your goddamn shit fucking ass fucking garbage piece of shit library.
+// imma have to use my own.
 import (
 	"fmt"
 	"os"
-	"strings"
-	"time"
 
-	cfg "github.com/kxddry/wbf/config"
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
 // Config is the configuration for the event booking service.
 type Config struct {
-	Srv         Server
-	BookTimeout time.Duration
-	CronTicker  time.Duration
-	Storage     Storage
+	Srv       Server  `yaml:"server" env-required:"true"`
+	Storage   Storage `yaml:"storage" env-required:"true"`
+	Kafka     Kafka   `yaml:"kafka" env-required:"true"`
+	NotifAddr string  `yaml:"notif_addr" env-required:"true"` // address of the delayed notification service
 }
 
 // Server is the configuration for the server.
 type Server struct {
-	Addr string
+	Addrs []string `yaml:"addrs" env-required:"true"`
 }
 
 // Storage is the configuration for the storage.
 type Storage struct {
-	MasterDSN string
-	SlaveDSNs []string
+	MasterDSN string   `yaml:"master_dsn" env-required:"true"`
+	SlaveDSNs []string `yaml:"slave_dsns" env-required:"true"`
 }
 
-// Update updates the configuration from a file.
-func (c *Config) Update(file string) error {
-	if c == nil {
-		c = &Config{}
-	}
-	cc := cfg.New()
-	err := cc.Load(file)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("config file not found: %w", err)
-		}
-		return err
-	}
-
-	tmpAddr := cc.GetString("server.addr")
-	if tmpAddr != "" {
-		c.Srv.Addr = tmpAddr
-	}
-
-	tmpBookTimeoutStr := cc.GetString("book.timeout")
-	if tmpBookTimeoutStr != "" {
-		tmpBookTimeout, err := time.ParseDuration(tmpBookTimeoutStr)
-		if err == nil {
-			c.BookTimeout = tmpBookTimeout
-		}
-	}
-
-	tmpCronTickerStr := cc.GetString("cron.ticker")
-	if tmpCronTickerStr != "" {
-		tmpCronTicker, err := time.ParseDuration(tmpCronTickerStr)
-		if err == nil {
-			c.CronTicker = tmpCronTicker
-		}
-	}
-
-	tmpStorageMasterDSN := cc.GetString("storage.master_dsn")
-	if tmpStorageMasterDSN != "" {
-		c.Storage.MasterDSN = tmpStorageMasterDSN
-	}
-
-	tmpStorageSlaveDSNs := cc.GetString("storage.slave_dsns")
-	if tmpStorageSlaveDSNs != "" {
-		c.Storage.SlaveDSNs = strings.Split(tmpStorageSlaveDSNs, ",")
-	}
-
-	return nil
+// Kafka is the configuration for the kafka.
+type Kafka struct {
+	Brokers []string `yaml:"brokers" env-required:"true"`
+	Topic   string   `yaml:"topic" env-required:"true"`
+	GroupID string   `yaml:"group_id" env-default:"eventbooker"`
 }
 
-func New() *Config {
-	return &Config{
-		Srv: Server{
-			Addr: ":8080",
-		},
-		BookTimeout: 20 * time.Minute,
-		CronTicker:  15 * time.Minute,
-		Storage: Storage{
-			MasterDSN: os.ExpandEnv("postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"),
-			SlaveDSNs: nil,
-		},
+// MustLoadConfig loads the config from the given path.
+// if the path is empty, it will load the config from the default path "config.yaml".
+// if the config is not valid, it will panic.
+func MustLoadConfig(path string) *Config {
+	if path == "" {
+		path = "config.yaml"
 	}
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		panic(fmt.Sprintf("config file %s does not exist", path))
+	}
+
+	var cfg Config
+
+	if err := cleanenv.ReadConfig(path, &cfg); err != nil {
+		panic(err)
+	}
+
+	return &cfg
 }

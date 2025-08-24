@@ -23,6 +23,13 @@ func New(masterDSN string, slaveDSNs ...string) (*NotificationRepository, error)
 	return &NotificationRepository{db: db}, nil
 }
 
+func (r *NotificationRepository) Close() error {
+	for _, slave := range r.db.Slaves {
+		_ = slave.Close()
+	}
+	return r.db.Master.Close()
+}
+
 /*
 CREATE TABLE notifications (
 	id UUID NOT NULL UNIQUE,

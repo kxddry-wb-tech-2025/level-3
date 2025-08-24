@@ -22,6 +22,13 @@ func New(masterDSN string, slaveDSNs ...string) (*EventRepository, error) {
 	return &EventRepository{db: db}, nil
 }
 
+func (r *EventRepository) Close() error {
+	for _, slave := range r.db.Slaves {
+		_ = slave.Close()
+	}
+	return r.db.Master.Close()
+}
+
 /*
 CREATE TABLE events (
 	pk BIGSERIAL PRIMARY KEY,
