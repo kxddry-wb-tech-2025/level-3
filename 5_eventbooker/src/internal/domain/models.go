@@ -25,10 +25,10 @@ type BookRequest struct {
 
 // BookResponse is the response body for booking an event.
 type BookResponse struct {
-	ID              string    `json:"id,omitempty"`
-	Status          string    `json:"status,omitempty"`
-	PaymentDeadline time.Time `json:"payment_deadline,omitempty" format:"rfc3339"`
-	Error           string    `json:"error,omitempty"`
+	ID              string     `json:"id,omitempty"`
+	Status          string     `json:"status,omitempty"`
+	PaymentDeadline *time.Time `json:"payment_deadline,omitempty" format:"rfc3339"`
+	Error           string     `json:"error,omitempty"`
 }
 
 // DelayedNotification is the value object for a delayed notification.
@@ -57,19 +57,19 @@ type EventDetailsResponse struct {
 	Name       string        `json:"name,omitempty"`
 	Available  int64         `json:"available,omitempty"`
 	Capacity   int64         `json:"capacity,omitempty"`
-	Date       time.Time     `json:"date,omitempty"`
+	Date       *time.Time    `json:"date,omitempty"`
 	PaymentTTL time.Duration `json:"payment_ttl,omitempty"`
 	Error      string        `json:"error,omitempty"`
 }
 
 // Booking is the value object for a booking cache.
 type Booking struct {
-	ID              string    `json:"id,omitempty"`
-	UserID          string    `json:"user_id,omitempty"`
-	EventID         string    `json:"event_id,omitempty"`
-	Status          string    `json:"status,omitempty"`
-	PaymentDeadline time.Time `json:"payment_deadline,omitempty" format:"rfc3339"`
-	Decremented     bool      `json:"decremented,omitempty"`
+	ID              string     `json:"id,omitempty"`
+	UserID          string     `json:"user_id,omitempty"`
+	EventID         string     `json:"event_id,omitempty"`
+	Status          string     `json:"status,omitempty"`
+	PaymentDeadline *time.Time `json:"payment_deadline,omitempty" format:"rfc3339"`
+	Decremented     bool       `json:"decremented,omitempty"`
 }
 
 // Event is the value object for an event.
@@ -78,7 +78,7 @@ type Event struct {
 	Name       string        `json:"name,omitempty"`
 	Capacity   int64         `json:"capacity,omitempty"`
 	Available  int64         `json:"available,omitempty"`
-	Date       time.Time     `json:"date,omitempty" format:"rfc3339"`
+	Date       *time.Time    `json:"date,omitempty" format:"rfc3339"`
 	PaymentTTL time.Duration `json:"payment_ttl,omitempty"`
 }
 

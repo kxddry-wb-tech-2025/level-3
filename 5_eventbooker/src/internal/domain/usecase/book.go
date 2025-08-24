@@ -26,7 +26,7 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 			return errors.New("event is full")
 		}
 		// check if event is in the past
-		if event.Date.Before(time.Now()) {
+		if event.Date != nil && event.Date.Before(time.Now().UTC()) {
 			return errors.New("event is in the past")
 		}
 		// set payment deadline
@@ -71,6 +71,6 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 	return domain.BookResponse{
 		ID:              bookingID,
 		Status:          domain.BookingStatusPending,
-		PaymentDeadline: paymentDeadline,
+		PaymentDeadline: &paymentDeadline,
 	}
 }
