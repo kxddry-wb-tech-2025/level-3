@@ -43,7 +43,8 @@ func (s *Server) Run(addrs ...string) error {
 }
 
 func (s *Server) registerRoutes() {
-	r := s.r
+	// use group to add prefix to all routes
+	r := s.r.Group("/api/v1")
 	r.POST("/events", func(c *ginext.Context) {
 		var req domain.CreateEventRequest
 		if err := c.ShouldBindJSON(&req); err != nil {

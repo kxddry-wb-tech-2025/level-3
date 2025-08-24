@@ -25,18 +25,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventCreateResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
   /events/{id}/book:
     post:
@@ -61,18 +49,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BookingResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
   /events/{id}/confirm:
     post:
@@ -97,18 +73,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConfirmResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
   /events/{id}:
     get:
       summary: Get event details
@@ -125,19 +89,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EventDetailsResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/EventDetailsResponse' 
 
 components:
   schemas:
