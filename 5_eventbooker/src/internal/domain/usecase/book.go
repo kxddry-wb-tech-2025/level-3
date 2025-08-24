@@ -45,7 +45,7 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 		}
 
 		// send delayed notification
-		if notificationID, err := u.nf.SendNotification(notif); err != nil {
+		if notificationID, err := u.nf.SendNotification(ctx, notif); err != nil {
 			zlog.Logger.Err(err).Msg("failed to send delayed notification")
 		} else {
 			event.Available--

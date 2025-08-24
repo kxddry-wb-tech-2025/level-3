@@ -45,13 +45,13 @@ type TxManager interface {
 
 // NotificationService is the interface for the notification service.
 type NotificationService interface {
-	SendNotification(notif domain.DelayedNotification) (string, error)
-	CancelNotification(notificationID string) error
+	SendNotification(ctx context.Context, notif domain.DelayedNotification) (string, error)
+	CancelNotification(ctx context.Context, notificationID string) error
 }
 
 // CancellationService is the interface for the cancellation service.
 type CancellationService interface {
-	Cancellations(ctx context.Context) (<-chan domain.CancelBookingEvent, error)
+	Messages(ctx context.Context) <-chan domain.CancelBookingEvent
 }
 
 // Usecase is the usecase for the event booking service.
@@ -63,16 +63,13 @@ type Usecase struct {
 
 // New is the constructor for the Usecase.
 // It is responsible for creating a new Usecase and handling cancellations.
-func New(ctx context.Context, cs CancellationService, nf NotificationService, storage TxManager) (*Usecase, error) {
+func New(ctx context.Context, cs CancellationService, nf NotificationService, storage TxManager) *Usecase {
 	uc := &Usecase{
 		cs:      cs,
 		nf:      nf,
 		storage: storage,
 	}
 	// handle cancellations
-	err := uc.HandleCancellations(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return uc, nil
+	uc.HandleCancellations(ctx)
+	return uc
 }

@@ -10,11 +10,9 @@ import (
 
 // HandleCancellations is the set of actions required to run the cancellation process.
 // It is responsible for cancelling a booking and incrementing the event's available capacity.
-func (u *Usecase) HandleCancellations(ctx context.Context) error {
-	events, err := u.cs.Cancellations(ctx)
-	if err != nil {
-		return err
-	}
+func (u *Usecase) HandleCancellations(ctx context.Context) {
+	log := zlog.Logger.With().Str("component", "usecase").Logger()
+	events := u.cs.Messages(ctx)
 
 	go func() {
 		for {
@@ -26,12 +24,11 @@ func (u *Usecase) HandleCancellations(ctx context.Context) error {
 					return
 				}
 				if err := u.cancelBooking(ctx, event.BookingID); err != nil {
-					zlog.Logger.Err(err).Msg("failed to cancel booking")
+					log.Err(err).Msg("failed to cancel booking")
 				}
 			}
 		}
 	}()
-	return nil
 }
 
 // cancelBooking is the set of actions required to cancel a booking.

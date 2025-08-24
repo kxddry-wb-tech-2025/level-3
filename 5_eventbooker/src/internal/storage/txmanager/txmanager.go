@@ -46,6 +46,16 @@ func New(masterDSN string, slaveDSNs ...string) (*TxManager, error) {
 	return &TxManager{db: db, repos: repos}, nil
 }
 
+func (m *TxManager) Close() error {
+	for _, slave := range m.db.Slaves {
+		_ = slave.Close()
+	}
+	_ = m.repos.EventRepository.Close()
+	_ = m.repos.BookingRepository.Close()
+	_ = m.repos.NotificationRepository.Close()
+	return m.db.Master.Close()
+}
+
 type Repositories struct {
 	EventRepository        *events.EventRepository
 	BookingRepository      *booking.BookingRepository

@@ -18,7 +18,7 @@ func (u *Usecase) CreateEvent(ctx context.Context, event domain.CreateEventReque
 
 	// create event
 	var id string
-	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
+	err := u.storage.Do(ctx, func(ctx context.Context, tx Tx) error {
 		// create event
 		var err error
 		id, err = tx.CreateEvent(ctx, event)

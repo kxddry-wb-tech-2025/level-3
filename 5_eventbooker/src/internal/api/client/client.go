@@ -2,12 +2,12 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"eventbooker/src/internal/domain"
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/kxddry/wbf/zlog"
 )
@@ -18,7 +18,7 @@ type Client struct {
 	addr   string
 }
 
-// NewClient creates a new client.
+// New creates a new client.
 // TODO: change this entire logic.
 // It uses a cache with the given TTL.
 // It is thread-safe.
@@ -27,7 +27,7 @@ type Client struct {
 //
 // Do not forget to call Stop() on the client when you're done with it.
 // Make sure that limit and TTL are enough to fit all your users.
-func NewClient(addr string, cacheTTL time.Duration, cacheLimit int) *Client {
+func New(addr string) *Client {
 	return &Client{
 		client: http.DefaultClient,
 		addr:   addr,
@@ -36,7 +36,7 @@ func NewClient(addr string, cacheTTL time.Duration, cacheLimit int) *Client {
 
 // SendNotification sends a notification at a specific time.
 // Returns the notification ID.
-func (c *Client) SendNotification(notif domain.DelayedNotification) (string, error) {
+func (c *Client) SendNotification(ctx context.Context, notif domain.DelayedNotification) (string, error) {
 	req := SendNotificationRequest{
 		SendAt:    notif.SendAt,
 		Channel:   "telegram",
@@ -49,7 +49,13 @@ func (c *Client) SendNotification(notif domain.DelayedNotification) (string, err
 		return "", err
 	}
 
-	resp, err := c.client.Post(c.addr+"/notify", "application/json", bytes.NewBuffer(js))
+	reqHt, err := http.NewRequestWithContext(ctx, http.MethodPost, c.addr+"/notify", bytes.NewBuffer(js))
+	if err != nil {
+		return "", err
+	}
+	reqHt.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.client.Do(reqHt)
 	if err != nil {
 		return "", err
 	}
@@ -72,7 +78,7 @@ func (c *Client) SendNotification(notif domain.DelayedNotification) (string, err
 }
 
 // CancelNotification cancels a notification.
-func (c *Client) CancelNotification(notificationID string) error {
+func (c *Client) CancelNotification(ctx context.Context, notificationID string) error {
 	req := CancelNotificationRequest{
 		ID: notificationID,
 	}
@@ -82,7 +88,7 @@ func (c *Client) CancelNotification(notificationID string) error {
 		return err
 	}
 
-	reqHt, err := http.NewRequest(http.MethodDelete, c.addr+"/notify/"+notificationID, bytes.NewReader(js))
+	reqHt, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.addr+"/notify/"+notificationID, bytes.NewReader(js))
 	if err != nil {
 		return err
 	}

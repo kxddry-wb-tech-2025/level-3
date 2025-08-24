@@ -14,7 +14,7 @@ type Usecase interface {
 	CreateEvent(ctx context.Context, event domain.CreateEventRequest) domain.CreateEventResponse
 	GetEvent(ctx context.Context, eventID string) domain.EventDetailsResponse
 	Book(ctx context.Context, eventID string, userID string) domain.BookResponse
-	Confirm(ctx context.Context, bookingID string) domain.ConfirmResponse
+	Confirm(ctx context.Context, eventID, bookingID string) domain.ConfirmResponse
 }
 
 type Server struct {
@@ -99,7 +99,7 @@ func (s *Server) registerRoutes() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event ID"})
 			return
 		}
-		res := s.uc.Confirm(c.Request.Context(), req.BookingID)
+		res := s.uc.Confirm(c.Request.Context(), eventID, req.BookingID)
 		if res.Error != "" {
 			c.JSON(http.StatusBadRequest, res)
 			return

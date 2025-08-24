@@ -11,10 +11,10 @@ import (
 
 // Confirm is the set of actions required to run the confirmation process.
 // It is responsible for confirming a booking and decrementing the event's available capacity.
-func (u *Usecase) Confirm(eventID, bookingID string) domain.ConfirmResponse {
+func (u *Usecase) Confirm(ctx context.Context, eventID, bookingID string) domain.ConfirmResponse {
 	var status string
 	var notificationID string
-	err := u.storage.Do(context.Background(), func(ctx context.Context, tx Tx) error {
+	err := u.storage.Do(ctx, func(ctx context.Context, tx Tx) error {
 		// get event
 		_, err := tx.GetEvent(ctx, eventID)
 		if err != nil {
@@ -63,7 +63,7 @@ func (u *Usecase) Confirm(eventID, bookingID string) domain.ConfirmResponse {
 	}
 
 	// cancel delayed notification
-	if err := u.nf.CancelNotification(notificationID); err != nil {
+	if err := u.nf.CancelNotification(ctx, notificationID); err != nil {
 		zlog.Logger.Err(err).Msg("failed to cancel delayed notification")
 	}
 
