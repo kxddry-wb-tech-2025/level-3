@@ -24,3 +24,7 @@ telegram:
 logging:
   level: "info"
   format: "json"
+
+server:
+  host: "0.0.0.0"
+  port: 8085

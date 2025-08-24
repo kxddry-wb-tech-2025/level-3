@@ -60,7 +60,7 @@ func main() {
 	redisDB, _ := strconv.Atoi(redisDBStr)
 	redisCfg := redis.Config{
 		Addr:     fmt.Sprintf("%s:%s", cfg.GetString("redis.host"), redisPort),
-		Password: cfg.GetString("redis.password"),
+		Password: os.ExpandEnv(cfg.GetString("redis.password")),
 		DB:       redisDB,
 	}
 	redisStore, err := redis.NewStorage(ctx, redisCfg)
@@ -77,7 +77,7 @@ func main() {
 		Host:      cfg.GetString("rabbitmq.host"),
 		Port:      rp,
 		Username:  cfg.GetString("rabbitmq.username"),
-		Password:  cfg.GetString("rabbitmq.password"),
+		Password:  os.ExpandEnv(cfg.GetString("rabbitmq.password")),
 		QueueName: cfg.GetString("rabbitmq.queue_name"),
 	}
 	rmq, err := rabbit.NewRabbit(rmqCfg)
