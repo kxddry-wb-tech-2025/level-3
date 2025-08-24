@@ -91,9 +91,9 @@ func (r *EventRepository) GetEvent(ctx context.Context, id string) (domain.Event
 	var rows *sql.Rows
 	var err error
 	if tx, ok := storage.TxFromContext(ctx); ok {
-		rows, err = tx.QueryContext(ctx, `SELECT name, capacity, date, payment_ttl FROM events WHERE id = $1`, id)
+		rows, err = tx.QueryContext(ctx, `SELECT name, capacity, available, date, payment_ttl FROM events WHERE id = $1`, id)
 	} else {
-		rows, err = r.db.QueryContext(ctx, `SELECT name, capacity, date, payment_ttl FROM events WHERE id = $1`, id)
+		rows, err = r.db.QueryContext(ctx, `SELECT name, capacity, available, date, payment_ttl FROM events WHERE id = $1`, id)
 	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -106,7 +106,7 @@ func (r *EventRepository) GetEvent(ctx context.Context, id string) (domain.Event
 		return domain.Event{}, storage.ErrEventNotFound
 	}
 	var event domain.Event
-	if err = rows.Scan(&event.Name, &event.Capacity, &event.Date, &event.PaymentTTL); err != nil {
+	if err = rows.Scan(&event.Name, &event.Capacity, &event.Available, &event.Date, &event.PaymentTTL); err != nil {
 		return domain.Event{}, err
 	}
 	event.ID = id
