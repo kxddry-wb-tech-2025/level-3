@@ -1,0 +1,16 @@
+server:
+  addrs:
+    - "0.0.0.0:8080"
+
+storage:
+  master_dsn: postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@postgres:5432/$POSTGRES_DB?sslmode=disable
+  slave_dsns:
+    - 
+
+kafka:
+  brokers:
+    - "kafka:9092"
+  topic: "sent_notifications"
+  group_id: "eventbooker"
+
+notif_addr: "http://notifier:8085"

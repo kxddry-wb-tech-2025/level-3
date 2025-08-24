@@ -43,7 +43,7 @@ func New(masterDSN string, slaveDSNs ...string) (*TxManager, error) {
 		BookingRepository:      bookingRepo,
 		NotificationRepository: notificationRepo,
 	}
-	return &TxManager{db: db, repos: repos}, nil
+	return &TxManager{db: db, repos: repos}, db.Master.Ping()
 }
 
 func (m *TxManager) Close() error {

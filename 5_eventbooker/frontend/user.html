@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Бронирование - Система бронирования</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <h1>Бронирование мест</h1>
+            <a href="index.html" class="btn btn-secondary">На главную</a>
+        </header>
+
+        <section class="user-info-section">
+            <h2>Информация пользователя</h2>
+            <div class="form">
+                <div class="form-group">
+                    <label for="user-id">User ID:</label>
+                    <input type="text" id="user-id" placeholder="Введите ваш User ID (UUID)" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="telegram-id">Telegram ID:</label>
+                    <input type="number" id="telegram-id" placeholder="Введите ваш Telegram ID" required>
+                </div>
+                
+                <button id="save-user-info" class="btn btn-primary">Сохранить информацию</button>
+            </div>
+            
+            <div id="user-info-display" class="user-info hidden">
+                <h3>Ваша информация:</h3>
+                <p><strong>User ID:</strong> <span id="display-user-id"></span></p>
+                <p><strong>Telegram ID:</strong> <span id="display-telegram-id"></span></p>
+                <button id="edit-user-info" class="btn btn-secondary">Изменить</button>
+            </div>
+        </section>
+
+        <section class="event-search-section">
+            <h2>Найти мероприятие</h2>
+            <div class="form">
+                <div class="form-group">
+                    <label for="event-id-input">ID мероприятия:</label>
+                    <input type="text" id="event-id-input" placeholder="Введите UUID мероприятия">
+                </div>
+                <button id="search-event-btn" class="btn btn-primary">Найти мероприятие</button>
+            </div>
+        </section>
+
+        <section id="event-info-section" class="event-info-section hidden">
+            <h2>Информация о мероприятии</h2>
+            <div id="event-details" class="event-details"></div>
+            
+            <div class="booking-actions">
+                <button id="book-seat-btn" class="btn btn-success">Забронировать место</button>
+                <button id="view-full-event-btn" class="btn btn-secondary">Подробная информация</button>
+            </div>
+        </section>
+
+        <section id="bookings-section" class="bookings-section">
+            <h2>Мои бронирования</h2>
+            <div id="user-bookings" class="bookings-list">
+                <p class="info-message">Здесь будут отображаться ваши активные бронирования</p>
+            </div>
+        </section>
+    </div>
+
+    <div id="message" class="message"></div>
+    <script src="user.js"></script>
+</body>
+</html>

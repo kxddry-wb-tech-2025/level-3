@@ -54,5 +54,10 @@ func MustLoadConfig(path string) *Config {
 		panic(err)
 	}
 
+	for i := range cfg.Storage.SlaveDSNs {
+		cfg.Storage.SlaveDSNs[i] = os.ExpandEnv(cfg.Storage.SlaveDSNs[i])
+	}
+	cfg.Storage.MasterDSN = os.ExpandEnv(cfg.Storage.MasterDSN)
+
 	return &cfg
 }

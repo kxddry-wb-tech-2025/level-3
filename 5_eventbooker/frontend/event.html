@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мероприятие - Система бронирования</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <h1>Информация о мероприятии</h1>
+            <div class="header-actions">
+                <a href="admin.html" class="btn btn-secondary">Админ панель</a>
+                <a href="user.html" class="btn btn-secondary">Пользовательская панель</a>
+                <a href="index.html" class="btn btn-secondary">На главную</a>
+            </div>
+        </header>
+
+        <section class="event-details-section">
+            <div id="event-info" class="event-info">
+                <p class="loading-message">Загрузка информации о мероприятии...</p>
+            </div>
+        </section>
+
+        <section class="booking-management-section">
+            <h2>Управление бронированием</h2>
+            
+            <div class="booking-form">
+                <h3>Забронировать место</h3>
+                <div class="form">
+                    <div class="form-group">
+                        <label for="user-id">User ID:</label>
+                        <input type="text" id="user-id" placeholder="UUID пользователя">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="telegram-id">Telegram ID:</label>
+                        <input type="number" id="telegram-id" placeholder="Telegram ID">
+                    </div>
+                    
+                    <button id="book-btn" class="btn btn-success">Забронировать</button>
+                </div>
+            </div>
+
+            <div class="confirm-form">
+                <h3>Подтвердить оплату</h3>
+                <div class="form">
+                    <div class="form-group">
+                        <label for="booking-id">Booking ID:</label>
+                        <input type="text" id="booking-id" placeholder="UUID бронирования">
+                    </div>
+                    
+                    <button id="confirm-btn" class="btn btn-primary">Подтвердить оплату</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="refresh-section">
+            <button id="refresh-btn" class="btn btn-secondary">Обновить информацию</button>
+        </section>
+    </div>
+
+    <div id="message" class="message"></div>
+    <script src="event.js"></script>
+</body>
+</html>

@@ -43,9 +43,14 @@ func (s *Server) Run(addrs ...string) error {
 }
 
 func (s *Server) registerRoutes() {
+	// health check
+	s.r.GET("/health", func(c *ginext.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
 	// use group to add prefix to all routes
-	r := s.r.Group("/api/v1")
-	r.POST("/events", func(c *ginext.Context) {
+	r := s.r.Group("/events")
+	r.POST("/", func(c *ginext.Context) {
 		var req domain.CreateEventRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -59,7 +64,7 @@ func (s *Server) registerRoutes() {
 		c.JSON(http.StatusOK, res)
 	})
 
-	r.GET("/events/:id", func(c *ginext.Context) {
+	r.GET("/:id", func(c *ginext.Context) {
 		id := c.Param("id")
 		res := s.uc.GetEvent(c.Request.Context(), id)
 		if res.Error != "" {
@@ -69,7 +74,7 @@ func (s *Server) registerRoutes() {
 		c.JSON(http.StatusOK, res)
 	})
 
-	r.POST("/events/:id/book", func(c *ginext.Context) {
+	r.POST("/:id/book", func(c *ginext.Context) {
 		var req domain.BookRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -89,7 +94,7 @@ func (s *Server) registerRoutes() {
 		c.JSON(http.StatusOK, res)
 	})
 
-	r.POST("/events/:id/confirm", func(c *ginext.Context) {
+	r.POST("/:id/confirm", func(c *ginext.Context) {
 		var req domain.ConfirmRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
