@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/kxddry/wbf/ginext"
 )
@@ -20,6 +21,7 @@ type Usecase interface {
 type Server struct {
 	r  *ginext.Engine
 	uc Usecase
+	v  *validator.Validate
 }
 
 func NewServer(uc Usecase) *Server {
@@ -28,7 +30,7 @@ func NewServer(uc Usecase) *Server {
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
 	r.Use(gin.ErrorLogger())
-	s := &Server{r: r, uc: uc}
+	s := &Server{r: r, uc: uc, v: validator.New()}
 
 	s.registerRoutes()
 
@@ -57,6 +59,10 @@ func (s *Server) registerRoutes() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		if err := s.v.Struct(req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		res := s.uc.CreateEvent(c.Request.Context(), req)
 		if res.Error != "" {
 			c.JSON(http.StatusBadRequest, res)
@@ -67,6 +73,10 @@ func (s *Server) registerRoutes() {
 
 	r.GET("/:id", func(c *ginext.Context) {
 		id := c.Param("id")
+		if _, err := uuid.Parse(id); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event ID"})
+			return
+		}
 		res := s.uc.GetEvent(c.Request.Context(), id)
 		if res.Error != "" {
 			c.JSON(http.StatusBadRequest, res)
@@ -81,8 +91,11 @@ func (s *Server) registerRoutes() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		if err := s.v.Struct(req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		eventID := c.Param("id")
-		// validate event ID
 		if _, err := uuid.Parse(eventID); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event ID"})
 			return
@@ -98,6 +111,10 @@ func (s *Server) registerRoutes() {
 	r.POST("/:id/confirm", func(c *ginext.Context) {
 		var req domain.ConfirmRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if err := s.v.Struct(req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
