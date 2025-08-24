@@ -162,6 +162,7 @@ func (r *BookingRepository) Confirm(ctx context.Context, bookingID string) (stri
 		if rowsAffected == 0 {
 			return "", storage.ErrBookingNotFound
 		}
+		status = domain.BookingStatusConfirmed
 		return status, nil
 	}
 	res, err := r.db.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, domain.BookingStatusConfirmed, bookingID)
@@ -175,5 +176,6 @@ func (r *BookingRepository) Confirm(ctx context.Context, bookingID string) (stri
 	if rowsAffected == 0 {
 		return "", storage.ErrBookingNotFound
 	}
+	status = domain.BookingStatusConfirmed
 	return status, nil
 }
