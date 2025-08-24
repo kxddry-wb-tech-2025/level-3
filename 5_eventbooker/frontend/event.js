@@ -101,6 +101,14 @@ async function bookSeat() {
         showMessage('Некорректный формат User ID (должен быть UUID)', 'warning');
         return;
     }
+    if (telegramId.length != 9) {
+        showMessage('Некорректный формат Telegram ID (должен быть 9 цифр)', 'warning');
+        return;
+    }
+    if (isNaN(telegramId)) {
+        showMessage('Некорректный формат Telegram ID (должен быть числом)', 'warning');
+        return;
+    }
     
     try {
         const response = await fetch(`${API_BASE_URL}/events/${eventId}/book`, {

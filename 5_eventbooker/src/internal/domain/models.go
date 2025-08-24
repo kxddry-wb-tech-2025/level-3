@@ -20,7 +20,8 @@ type CreateEventResponse struct {
 
 // BookRequest is the request body for booking an event.
 type BookRequest struct {
-	UserID string `json:"user_id,omitempty" validate:"required,uuid"`
+	UserID     string `json:"user_id" validate:"required,uuid"`
+	TelegramID int    `json:"telegram_id" validate:"required,min=100000000,max=999999999"`
 }
 
 // BookResponse is the response body for booking an event.
