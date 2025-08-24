@@ -40,6 +40,10 @@ func (u *Usecase) CreateEvent(ctx context.Context, event domain.CreateEventReque
 
 	// return event ID
 	return domain.CreateEventResponse{
-		ID: id,
+		ID:         id,
+		Date:       event.Date,
+		Capacity:   event.Capacity,
+		Name:       event.Name,
+		BookingTTL: event.PaymentTTL,
 	}
 }

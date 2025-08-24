@@ -51,28 +51,36 @@ func (s *Scheduler) Run(ctx context.Context) {
 }
 
 func (s *Scheduler) publishDue(ctx context.Context, now time.Time) {
+	log := zlog.Logger.With().Str("component", "scheduler").Logger()
 	ids, err := s.store.PopDue(ctx, "due", now, 100)
+	log.Debug().Int("count", len(ids)).Msg("scheduler: pop due")
 	if err != nil {
-		zlog.Logger.Error().Err(err).Msg("scheduler: pop due")
+		log.Error().Err(err).Msg("scheduler: pop due")
 		return
 	}
 	for _, id := range ids {
+		log.Debug().Str("id", id).Msg("scheduler: publish due")
 		n, err := s.store.GetNotification(ctx, id)
 		if err != nil || n == nil {
 			if err != nil {
-				zlog.Logger.Error().Err(err).Str("id", id).Msg("scheduler: get notification")
+				log.Error().Err(err).Str("id", id).Msg("scheduler: get notification")
 			}
 			continue
 		}
 		if n.Status == models.StatusCancelled {
+			log.Debug().Str("id", id).Msg("scheduler: notification cancelled")
 			continue
 		}
 		n.Status = models.StatusQueued
 		n.UpdatedAt = now.UTC()
-		_ = s.store.SaveNotification(ctx, n)
+		log.Debug().Any("notification", n).Msg("scheduler: save notification")
+		if err := s.store.SaveNotification(ctx, n); err != nil {
+			log.Error().Err(err).Str("id", id).Msg("scheduler: save notification")
+			continue
+		}
 		payload, _ := json.Marshal(n)
 		if err := s.q.Publish(ctx, payload); err != nil {
-			zlog.Logger.Error().Err(err).Str("id", id).Msg("scheduler: publish")
+			log.Error().Err(err).Str("id", id).Msg("scheduler: publish")
 			_ = s.store.EnqueueNow(ctx, id)
 		}
 	}

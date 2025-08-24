@@ -45,7 +45,7 @@ function displayCreatedEvents() {
             <p><strong>ID:</strong> <span class="event-id">${event.id}</span></p>
             <p><strong>Дата:</strong> ${formatDateTime(event.date)}</p>
             <p><strong>Вместимость:</strong> ${event.capacity} мест</p>
-            <p><strong>TTL бронирования:</strong> ${event.booking_ttl || 300} секунд</p>
+            <p><strong>TTL бронирования:</strong> ${event.payment_ttl || 300} секунд</p>
             <div class="booking-actions">
                 <button onclick="viewEvent('${event.id}')" class="btn btn-primary">Посмотреть</button>
                 <button onclick="copyEventId('${event.id}')" class="btn btn-secondary">Копировать ID</button>
@@ -97,7 +97,7 @@ document.getElementById('create-event-form').addEventListener('submit', async (e
                 name: formData.name,
                 date: formData.date,
                 capacity: formData.capacity,
-                payment_ttl: formData.payment_ttl
+                payment_ttl: formData.payment_ttl,
             };
             
             createdEvents.unshift(newEvent);

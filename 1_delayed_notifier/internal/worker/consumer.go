@@ -49,6 +49,7 @@ func (c *Consumer) Run(ctx context.Context) (<-chan models.NotificationKafka, er
 		zlog.Logger.Error().Err(err).Msg("consumer: failed to start consuming")
 		return nil, err
 	}
+	log := zlog.Logger.With().Str("component", "consumer").Logger()
 	out := make(chan models.NotificationKafka, 100)
 
 	go func() {
@@ -61,6 +62,7 @@ func (c *Consumer) Run(ctx context.Context) (<-chan models.NotificationKafka, er
 				if !ok {
 					return
 				}
+				log.Debug().Any("delivery", d).Msg("consumer: received delivery")
 				c.processDelivery(ctx, d, out)
 			}
 		}
@@ -72,10 +74,11 @@ func (c *Consumer) Run(ctx context.Context) (<-chan models.NotificationKafka, er
 // processDelivery processes a delivery and sends the notification to the output channel.
 // the output channel MUST be ready to receive and process notifications.
 func (c *Consumer) processDelivery(ctx context.Context, d models.Delivery, out chan<- models.NotificationKafka) {
+	log := zlog.Logger.With().Str("component", "consumer").Logger()
 	var n models.Notification
 	if err := json.Unmarshal(d.Body(), &n); err != nil {
 		_ = d.Nack(false)
-		zlog.Logger.Error().Err(err).Msg("consumer: bad payload")
+		log.Error().Err(err).Msg("consumer: bad payload")
 		return
 	}
 	if n.Status == models.StatusCancelled {
@@ -95,7 +98,7 @@ func (c *Consumer) processDelivery(ctx context.Context, d models.Delivery, out c
 	// send via sender with short retry strategy; schedule long retry if still failing
 	short := retry.Strategy{Attempts: 3, Delay: 10 * time.Millisecond, Backoff: 2}
 	if err := retry.Do(func() error { return c.sender.Send(ctx, n) }, short); err != nil {
-		zlog.Logger.Error().Err(err).Str("id", n.ID).Msg("consumer: send failed")
+		log.Error().Err(err).Str("id", n.ID).Msg("consumer: send failed")
 		n.Status = models.StatusRetrying
 		n.RetryCount++
 		next := time.Now().Add(computeBackoff(n.RetryCount)).UTC()

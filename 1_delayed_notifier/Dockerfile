@@ -1,4 +1,4 @@
-FROM golang:1.25.0-alpine AS builder
+FROM golang:1.25.0-bookworm AS builder
 
 WORKDIR /app
 
@@ -9,10 +9,14 @@ COPY . .
 
 RUN go build -o app ./cmd/notifier/main.go
 
-FROM alpine:latest
+FROM golang:1.25.0
 WORKDIR /app
 
-COPY --from=builder /app/app .
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+
+COPY --from=builder /app/app /app/app
 COPY static/ ./static/
 
-CMD ["./app"]
+EXPOSE 40000
+
+CMD ["dlv", "--listen=:40000", "--headless=true", "--api-version=2", "exec", "/app/app"]

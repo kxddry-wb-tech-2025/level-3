@@ -14,8 +14,12 @@ type CreateEventRequest struct {
 
 // CreateEventResponse is the response body for creating an event.
 type CreateEventResponse struct {
-	ID    string `json:"id,omitempty" validate:"required,uuid"`
-	Error string `json:"error,omitempty"`
+	ID         string    `json:"id,omitempty" validate:"required,uuid"`
+	Error      string    `json:"error,omitempty"`
+	BookingTTL int       `json:"payment_ttl,omitempty"`
+	Date       time.Time `json:"date,omitempty" format:"rfc3339"`
+	Capacity   int64     `json:"capacity,omitempty"`
+	Name       string    `json:"name,omitempty"`
 }
 
 // BookRequest is the request body for booking an event.
