@@ -23,13 +23,19 @@ type createReq struct {
 
 // RegisterRoutes registers HTTP endpoints for creating, querying and cancelling notifications.
 func RegisterRoutes(ctx context.Context, r *ginext.Engine, store *redis.Storage) {
+	log := zlog.Logger.With().Str("component", "httpapi").Logger()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+	r.Use(gin.ErrorLogger())
 	r.POST("/notify", func(c *ginext.Context) {
 		var req createReq
 		if err := c.BindJSON(&req); err != nil {
+			log.Error().Err(err).Msg("bind json failed")
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		if req.Channel == "" || req.Recipient == "" || req.Message == "" {
+			log.Error().Msg("channel, recipient and message are required")
 			c.JSON(http.StatusBadRequest, gin.H{"error": "channel, recipient and message are required"})
 			return
 		}
@@ -46,6 +52,7 @@ func RegisterRoutes(ctx context.Context, r *ginext.Engine, store *redis.Storage)
 				}
 			}
 			if !valid {
+				log.Error().Msg("telegram recipient must be exactly 9 digits")
 				c.JSON(http.StatusBadRequest, gin.H{"error": "telegram recipient must be exactly 9 digits"})
 				return
 			}
@@ -67,6 +74,7 @@ func RegisterRoutes(ctx context.Context, r *ginext.Engine, store *redis.Storage)
 			UpdatedAt: now,
 		}
 		if err := store.CreateNotification(ctx, n); err != nil {
+			log.Error().Err(err).Msg("create notification failed")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -77,10 +85,12 @@ func RegisterRoutes(ctx context.Context, r *ginext.Engine, store *redis.Storage)
 		id := c.Param("id")
 		n, err := store.GetNotification(ctx, id)
 		if err != nil {
+			log.Error().Err(err).Msg("get notification failed")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		if n == nil {
+			log.Error().Msg("notification not found")
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}
@@ -90,7 +100,7 @@ func RegisterRoutes(ctx context.Context, r *ginext.Engine, store *redis.Storage)
 	r.DELETE("/notify/:id", func(c *ginext.Context) {
 		id := c.Param("id")
 		if err := store.CancelNotification(ctx, id); err != nil {
-			zlog.Logger.Error().Err(err).Str("id", id).Msg("cancel failed")
+			log.Error().Err(err).Str("id", id).Msg("cancel failed")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
