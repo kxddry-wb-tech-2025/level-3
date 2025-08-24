@@ -11,6 +11,7 @@ import (
 func (u *Usecase) CreateEvent(ctx context.Context, event domain.CreateEventRequest) domain.CreateEventResponse {
 	// check if event date is in the future
 	if !event.Date.After(time.Now()) {
+		u.log.Error().Msg("event date must be in the future")
 		return domain.CreateEventResponse{
 			Error: "event date must be in the future",
 		}
@@ -23,6 +24,7 @@ func (u *Usecase) CreateEvent(ctx context.Context, event domain.CreateEventReque
 		var err error
 		id, err = tx.CreateEvent(ctx, event)
 		if err != nil {
+			u.log.Error().Err(err).Msg("failed to create event")
 			return err
 		}
 		return nil
@@ -30,6 +32,7 @@ func (u *Usecase) CreateEvent(ctx context.Context, event domain.CreateEventReque
 
 	// return error if event creation failed
 	if err != nil {
+		u.log.Error().Err(err).Msg("failed to create event")
 		return domain.CreateEventResponse{
 			Error: err.Error(),
 		}

@@ -13,11 +13,13 @@ func (u *Usecase) GetEvent(ctx context.Context, eventID string) domain.EventDeta
 		var err error
 		event, err = tx.GetEvent(ctx, eventID)
 		if err != nil {
+			u.log.Error().Err(err).Msg("failed to get event")
 			return err
 		}
 		return nil
 	})
 	if err != nil {
+		u.log.Error().Err(err).Msg("failed to get event")
 		return domain.EventDetailsResponse{
 			Error: err.Error(),
 		}

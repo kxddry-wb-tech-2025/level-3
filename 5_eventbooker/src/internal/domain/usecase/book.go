@@ -19,14 +19,17 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 		// get event
 		event, err := tx.GetEvent(ctx, eventID)
 		if err != nil {
+			u.log.Error().Err(err).Msg("failed to get event")
 			return err
 		}
 		// check if event is full
 		if event.Available <= 0 {
+			u.log.Error().Msg("event is full")
 			return errors.New("event is full")
 		}
 		// check if event is in the past
 		if event.Date != nil && event.Date.Before(time.Now().UTC()) {
+			u.log.Error().Msg("event is in the past")
 			return errors.New("event is in the past")
 		}
 		// set payment deadline
@@ -34,6 +37,7 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 		// book event
 		bookingID, err = tx.Book(ctx, eventID, userID, paymentDeadline)
 		if err != nil {
+			u.log.Error().Err(err).Msg("failed to book event")
 			return err
 		}
 
@@ -50,19 +54,23 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 		} else {
 			event.Available--
 			if err = tx.UpdateEvent(ctx, event); err != nil {
+				u.log.Error().Err(err).Msg("failed to update event")
 				return err
 			}
 			if err = tx.BookingSetDecremented(ctx, bookingID, true); err != nil {
+				u.log.Error().Err(err).Msg("failed to set booking decremented")
 				return err
 			}
 			notif.NotificationID = notificationID
 			if err = tx.AddNotification(ctx, notif); err != nil {
+				u.log.Error().Err(err).Msg("failed to add notification")
 				return err
 			}
 		}
 		return nil
 	})
 	if err != nil {
+		u.log.Error().Err(err).Msg("failed to book event")
 		return domain.BookResponse{
 			Error: err.Error(),
 		}

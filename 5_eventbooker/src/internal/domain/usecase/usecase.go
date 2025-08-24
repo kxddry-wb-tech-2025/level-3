@@ -5,6 +5,9 @@ import (
 	"time"
 
 	"eventbooker/src/internal/domain"
+
+	"github.com/kxddry/wbf/zlog"
+	"github.com/rs/zerolog"
 )
 
 // EventRepository is the interface for the event repository.
@@ -59,6 +62,7 @@ type Usecase struct {
 	cs      CancellationService
 	nf      NotificationService
 	storage TxManager
+	log     zerolog.Logger
 }
 
 // New is the constructor for the Usecase.
@@ -68,6 +72,7 @@ func New(ctx context.Context, cs CancellationService, nf NotificationService, st
 		cs:      cs,
 		nf:      nf,
 		storage: storage,
+		log:     zlog.Logger.With().Str("component", "usecase").Logger(),
 	}
 	// handle cancellations
 	uc.HandleCancellations(ctx)

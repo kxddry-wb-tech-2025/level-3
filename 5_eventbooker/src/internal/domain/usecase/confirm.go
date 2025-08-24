@@ -18,20 +18,24 @@ func (u *Usecase) Confirm(ctx context.Context, eventID, bookingID string) domain
 		// get event
 		_, err := tx.GetEvent(ctx, eventID)
 		if err != nil {
+			u.log.Error().Err(err).Msg("failed to get event")
 			return err
 		}
 		// get booking
 		booking, err := tx.GetBooking(ctx, bookingID)
 		if err != nil {
+			u.log.Error().Err(err).Msg("failed to get booking")
 			return err
 		}
 		// check if booking belongs to the event
 		if booking.EventID != eventID {
+			u.log.Error().Msg("booking does not belong to the event")
 			return errors.New("booking does not belong to the event")
 		}
 
 		// check if booking payment deadline has passed
 		if booking.PaymentDeadline.Before(time.Now()) {
+			u.log.Error().Msg("booking payment deadline has passed")
 			return errors.New("booking payment deadline has passed")
 		}
 
@@ -49,6 +53,7 @@ func (u *Usecase) Confirm(ctx context.Context, eventID, bookingID string) domain
 		// confirm booking
 		status, err = tx.Confirm(ctx, bookingID)
 		if err != nil {
+			u.log.Error().Err(err).Msg("failed to confirm booking")
 			return err
 		}
 
@@ -64,7 +69,7 @@ func (u *Usecase) Confirm(ctx context.Context, eventID, bookingID string) domain
 
 	// cancel delayed notification
 	if err := u.nf.CancelNotification(ctx, notificationID); err != nil {
-		zlog.Logger.Err(err).Msg("failed to cancel delayed notification")
+		u.log.Error().Err(err).Msg("failed to cancel delayed notification")
 	}
 
 	return domain.ConfirmResponse{
