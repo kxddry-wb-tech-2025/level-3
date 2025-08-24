@@ -1,11 +1,19 @@
 package api
 
 import (
+	"bytes"
 	"comment-tree/internal/domain"
+	"comment-tree/internal/storage"
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // MockStorage is a mock implementation of Storage interface
@@ -300,4 +308,164 @@ func TestStorageInterfaceWithSearch(t *testing.T) {
 	if comments[1].Content != "Second test comment" {
 		t.Errorf("Expected second comment content 'Second test comment', got '%s'", comments[1].Content)
 	}
+}
+
+// --- HTTP handler tests ---
+
+func TestGetComments_Handler(t *testing.T) {
+    // happy path: returns empty JSON when no comments overall (nil tree)
+    st := &MockStorage{
+        getCommentsFunc: func(ctx context.Context, parentID string, asc bool, limit, offset int) (*domain.CommentTree, error) {
+            return nil, nil
+        },
+    }
+    s := New(st)
+    ts := httptest.NewServer(s.r)
+    defer ts.Close()
+
+    resp, err := http.Get(ts.URL + "/comments")
+    if err != nil {
+        t.Fatalf("http get error: %v", err)
+    }
+    if resp.StatusCode != http.StatusOK {
+        t.Fatalf("expected 200, got %d", resp.StatusCode)
+    }
+
+    // invalid parent id should return 400
+    resp, err = http.Get(ts.URL + "/comments?parent=not-a-uuid")
+    if err != nil {
+        t.Fatalf("http get error: %v", err)
+    }
+    if resp.StatusCode != http.StatusBadRequest {
+        t.Fatalf("expected 400, got %d", resp.StatusCode)
+    }
+}
+
+func TestGetComments_NotFound(t *testing.T) {
+    st := &MockStorage{
+        getCommentsFunc: func(ctx context.Context, parentID string, asc bool, limit, offset int) (*domain.CommentTree, error) {
+            return nil, storage.ErrNotFound
+        },
+    }
+    s := New(st)
+    ts := httptest.NewServer(s.r)
+    defer ts.Close()
+
+    // when storage says not found for specific parent, expect 404
+    id := uuid.NewString()
+    resp, err := http.Get(ts.URL + "/comments?parent=" + url.QueryEscape(id))
+    if err != nil {
+        t.Fatalf("http get error: %v", err)
+    }
+    if resp.StatusCode != http.StatusNotFound {
+        t.Fatalf("expected 404, got %d", resp.StatusCode)
+    }
+}
+
+func TestPostComment_Handler(t *testing.T) {
+    st := &MockStorage{
+        addCommentFunc: func(ctx context.Context, comment domain.Comment) (domain.Comment, error) {
+            comment.ID = uuid.NewString()
+            return comment, nil
+        },
+    }
+    s := New(st)
+    ts := httptest.NewServer(s.r)
+    defer ts.Close()
+
+    // invalid body
+    resp, err := http.Post(ts.URL+"/comments", "application/json", bytes.NewBufferString("{"))
+    if err != nil {
+        t.Fatalf("post error: %v", err)
+    }
+    if resp.StatusCode != http.StatusBadRequest {
+        t.Fatalf("expected 400, got %d", resp.StatusCode)
+    }
+
+    // invalid parent id
+    body, _ := json.Marshal(domain.AddCommentRequest{Content: "hi", ParentID: "not-a-uuid"})
+    resp, err = http.Post(ts.URL+"/comments", "application/json", bytes.NewReader(body))
+    if err != nil {
+        t.Fatalf("post error: %v", err)
+    }
+    if resp.StatusCode != http.StatusBadRequest {
+        t.Fatalf("expected 400, got %d", resp.StatusCode)
+    }
+
+    // success
+    body, _ = json.Marshal(domain.AddCommentRequest{Content: "hello"})
+    resp, err = http.Post(ts.URL+"/comments", "application/json", bytes.NewReader(body))
+    if err != nil {
+        t.Fatalf("post error: %v", err)
+    }
+    if resp.StatusCode != http.StatusCreated {
+        t.Fatalf("expected 201, got %d", resp.StatusCode)
+    }
+}
+
+func TestDeleteComment_Handler(t *testing.T) {
+    called := false
+    st := &MockStorage{
+        deleteCommentsFunc: func(ctx context.Context, id string) error {
+            called = true
+            return nil
+        },
+    }
+    s := New(st)
+
+    ts := httptest.NewServer(s.r)
+    defer ts.Close()
+
+    // invalid id
+    req, _ := http.NewRequest(http.MethodDelete, ts.URL+"/comments/not-a-uuid", nil)
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        t.Fatalf("delete error: %v", err)
+    }
+    if resp.StatusCode != http.StatusBadRequest {
+        t.Fatalf("expected 400, got %d", resp.StatusCode)
+    }
+
+    // valid id
+    id := uuid.NewString()
+    req, _ = http.NewRequest(http.MethodDelete, ts.URL+"/comments/"+id, nil)
+    resp, err = http.DefaultClient.Do(req)
+    if err != nil {
+        t.Fatalf("delete error: %v", err)
+    }
+    if resp.StatusCode != http.StatusOK {
+        t.Fatalf("expected 200, got %d", resp.StatusCode)
+    }
+    if !called {
+        t.Fatalf("expected delete to be called")
+    }
+}
+
+func TestSearchComments_Handler(t *testing.T) {
+    st := &MockStorage{
+        searchCommentsFunc: func(ctx context.Context, query string, limit, offset int) ([]domain.Comment, error) {
+            return []domain.Comment{{ID: "1", Content: "ok"}}, nil
+        },
+    }
+    s := New(st)
+    ts := httptest.NewServer(s.r)
+    defer ts.Close()
+
+    // missing q
+    resp, err := http.Get(ts.URL + "/comments/search")
+    if err != nil {
+        t.Fatalf("get error: %v", err)
+    }
+    if resp.StatusCode != http.StatusBadRequest {
+        t.Fatalf("expected 400, got %d", resp.StatusCode)
+    }
+
+    // ok
+    resp, err = http.Get(ts.URL + "/comments/search?q=hello&page=1&limit=10")
+    if err != nil {
+        t.Fatalf("get error: %v", err)
+    }
+    if resp.StatusCode != http.StatusOK {
+        t.Fatalf("expected 200, got %d", resp.StatusCode)
+    }
 }
