@@ -45,13 +45,13 @@ CREATE TABLE events (
 func (r *EventRepository) CreateEvent(ctx context.Context, event domain.CreateEventRequest) (string, error) {
 	var id string
 	if tx, ok := storage.TxFromContext(ctx); ok {
-		err := tx.QueryRowContext(ctx, `INSERT INTO events (name, capacity, date, payment_ttl) VALUES ($1, $2, $3, $4) RETURNING id`, event.Name, event.Capacity, event.Date, event.PaymentTTL).Scan(&id)
+		err := tx.QueryRowContext(ctx, `INSERT INTO events (name, capacity, available, date, payment_ttl) VALUES ($1, $2, $3, $4, $5) RETURNING id`, event.Name, event.Capacity, event.Capacity, event.Date, event.PaymentTTL).Scan(&id)
 		if err != nil {
 			return "", err
 		}
 		return id, nil
 	}
-	err := r.db.Master.QueryRowContext(ctx, `INSERT INTO events (name, capacity, date, payment_ttl) VALUES ($1, $2, $3, $4) RETURNING id`, event.Name, event.Capacity, event.Date, event.PaymentTTL).Scan(&id)
+	err := r.db.Master.QueryRowContext(ctx, `INSERT INTO events (name, capacity, available, date, payment_ttl) VALUES ($1, $2, $3, $4, $5) RETURNING id`, event.Name, event.Capacity, event.Capacity, event.Date, event.PaymentTTL).Scan(&id)
 	if err != nil {
 		return "", err
 	}
@@ -60,7 +60,7 @@ func (r *EventRepository) CreateEvent(ctx context.Context, event domain.CreateEv
 
 func (r *EventRepository) UpdateEvent(ctx context.Context, event domain.Event) error {
 	if tx, ok := storage.TxFromContext(ctx); ok {
-		res, err := tx.ExecContext(ctx, `UPDATE events SET name = $1, capacity = $2, date = $3, payment_ttl = $4 WHERE id = $5`, event.Name, event.Capacity, event.Date, event.PaymentTTL, event.ID)
+		res, err := tx.ExecContext(ctx, `UPDATE events SET name = $1, capacity = $2, available = $3, date = $4, payment_ttl = $5 WHERE id = $6`, event.Name, event.Capacity, event.Available, event.Date, event.PaymentTTL, event.ID)
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func (r *EventRepository) UpdateEvent(ctx context.Context, event domain.Event) e
 		}
 		return nil
 	}
-	res, err := r.db.ExecContext(ctx, `UPDATE events SET name = $1, capacity = $2, date = $3, payment_ttl = $4 WHERE id = $5`, event.Name, event.Capacity, event.Date, event.PaymentTTL, event.ID)
+	res, err := r.db.ExecContext(ctx, `UPDATE events SET name = $1, capacity = $2, available = $3, date = $4, payment_ttl = $5 WHERE id = $6`, event.Name, event.Capacity, event.Available, event.Date, event.PaymentTTL, event.ID)
 	if err != nil {
 		return err
 	}
