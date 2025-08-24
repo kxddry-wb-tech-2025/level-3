@@ -18,22 +18,22 @@
             <form id="create-event-form" class="form">
                 <div class="form-group">
                     <label for="event-name">Название мероприятия:</label>
-                    <input type="text" id="event-name" required>
+                    <input type="text" id="event-name" value="Event..." required>
                 </div>
                 
                 <div class="form-group">
                     <label for="event-date">Дата и время:</label>
-                    <input type="datetime-local" id="event-date" required>
+                    <input type="datetime-local" value="2026-01-01T00:00" id="event-date" required>
                 </div>
                 
                 <div class="form-group">
                     <label for="event-capacity">Количество мест:</label>
-                    <input type="number" id="event-capacity" min="1" required>
+                    <input type="number" id="event-capacity" value="100" min="1" required>
                 </div>
                 
                 <div class="form-group">
                     <label for="payment-ttl">Время на оплату (секунды):</label>
-                    <input type="number" id="payment-ttl" value="300" min="60">
+                    <input type="number" id="payment-ttl" value="300" min="1">
                     <small>По умолчанию: 300 секунд (5 минут)</small>
                 </div>
                 

@@ -119,7 +119,7 @@ func (t *tx) Rollback() error { return t.tx.Rollback() }
 // Do runs a function within a DB transaction, committing on success and rolling back on error.
 func (m *TxManager) Do(ctx context.Context, fn func(ctx context.Context, tx usecase.Tx) error) error {
 	// Start transaction on master connection
-	sqlTx, err := m.db.Master.BeginTx(ctx, nil)
+	sqlTx, err := m.db.Master.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return err
 	}

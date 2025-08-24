@@ -37,16 +37,6 @@ func (u *Usecase) cancelBooking(ctx context.Context, bookingID string) error {
 			u.log.Error().Err(err).Msg("failed to get booking")
 			return err
 		}
-		// check if booking is expired
-		if booking.Status == domain.BookingStatusExpired {
-			u.log.Error().Msg("booking is already expired")
-			return errors.New("booking is already expired")
-		}
-		// check if booking is confirmed
-		if booking.Status == domain.BookingStatusConfirmed {
-			u.log.Error().Msg("booking is confirmed")
-			return errors.New("booking is confirmed")
-		}
 
 		// if the booking was decremented, we need to increment the available capacity back
 		if booking.Decremented {
@@ -61,16 +51,28 @@ func (u *Usecase) cancelBooking(ctx context.Context, bookingID string) error {
 				u.log.Error().Err(err).Msg("failed to update event")
 				return err
 			}
+
+			// set booking decremented to false
+			if err = tx.BookingSetDecremented(ctx, bookingID, false); err != nil {
+				u.log.Error().Err(err).Msg("failed to set booking decremented")
+				return err
+			}
+		}
+
+		// check if booking is expired
+		if booking.Status == domain.BookingStatusExpired {
+			u.log.Error().Msg("booking is already expired")
+			return errors.New("booking is already expired")
+		}
+		// check if booking is confirmed
+		if booking.Status == domain.BookingStatusConfirmed {
+			u.log.Error().Msg("booking is confirmed")
+			return errors.New("booking is confirmed")
 		}
 
 		// set booking status to expired
 		if err = tx.BookingSetStatus(ctx, bookingID, domain.BookingStatusExpired); err != nil {
 			u.log.Error().Err(err).Msg("failed to set booking status")
-			return err
-		}
-		// set booking decremented to false
-		if err = tx.BookingSetDecremented(ctx, bookingID, false); err != nil {
-			u.log.Error().Err(err).Msg("failed to set booking decremented")
 			return err
 		}
 

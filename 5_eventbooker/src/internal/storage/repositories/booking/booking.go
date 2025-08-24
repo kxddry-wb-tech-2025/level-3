@@ -127,7 +127,7 @@ func (r *BookingRepository) BookingSetStatus(ctx context.Context, bookingID stri
 func (r *BookingRepository) GetBooking(ctx context.Context, bookingID string) (domain.Booking, error) {
 	var b domain.Booking
 	if tx, ok := storage.TxFromContext(ctx); ok {
-		err := tx.QueryRowContext(ctx, `SELECT event_id, user_id, payment_deadline, status FROM bookings WHERE id = $1`, bookingID).Scan(&b.EventID, &b.UserID, &b.PaymentDeadline, &b.Status)
+		err := tx.QueryRowContext(ctx, `SELECT event_id, user_id, payment_deadline, status, decremented FROM bookings WHERE id = $1`, bookingID).Scan(&b.EventID, &b.UserID, &b.PaymentDeadline, &b.Status, &b.Decremented)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return domain.Booking{}, storage.ErrBookingNotFound
@@ -137,7 +137,7 @@ func (r *BookingRepository) GetBooking(ctx context.Context, bookingID string) (d
 		b.ID = bookingID
 		return b, nil
 	}
-	err := r.db.Master.QueryRowContext(ctx, `SELECT event_id, user_id, payment_deadline, status FROM bookings WHERE id = $1`, bookingID).Scan(&b.EventID, &b.UserID, &b.PaymentDeadline, &b.Status)
+	err := r.db.Master.QueryRowContext(ctx, `SELECT event_id, user_id, payment_deadline, status, decremented FROM bookings WHERE id = $1`, bookingID).Scan(&b.EventID, &b.UserID, &b.PaymentDeadline, &b.Status, &b.Decremented)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.Booking{}, storage.ErrBookingNotFound

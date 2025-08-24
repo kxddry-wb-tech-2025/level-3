@@ -13,12 +13,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/kxddry/wbf/zlog"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	_ = godotenv.Load()
 	cfg := config.MustLoadConfig(os.Getenv("CONFIG_FILE"))
 	zlog.Init()
 	log := zlog.Logger
@@ -35,7 +37,7 @@ func main() {
 	uc := usecase.New(ctx, kfk, cli, txmgr)
 	log.Info().Msg("usecase created")
 
-	srv := api.NewServer(uc)
+	srv := api.NewServer(uc, "./frontend")
 	if err := srv.Run(cfg.Srv.Addrs...); err != nil {
 		log.Error().Err(err).Msg("failed to run server")
 		cancel()

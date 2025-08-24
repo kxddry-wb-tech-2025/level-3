@@ -28,7 +28,7 @@ type Server struct {
 	v   *validator.Validate
 }
 
-func NewServer(uc Usecase) *Server {
+func NewServer(uc Usecase, staticDir string) *Server {
 	r := ginext.New()
 
 	r.Use(gin.Recovery())
@@ -36,6 +36,9 @@ func NewServer(uc Usecase) *Server {
 	r.Use(gin.ErrorLogger())
 	s := &Server{r: r, uc: uc, v: validator.New(), log: zlog.Logger.With().Str("component", "api").Logger()}
 
+	if staticDir != "" {
+		r.StaticFS("/ui", http.Dir(staticDir))
+	}
 	s.registerRoutes()
 
 	return s
