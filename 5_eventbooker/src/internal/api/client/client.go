@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/kxddry/wbf/zlog"
 )
@@ -40,7 +41,7 @@ func (c *Client) SendNotification(ctx context.Context, notif domain.DelayedNotif
 	req := SendNotificationRequest{
 		SendAt:    notif.SendAt,
 		Channel:   "telegram",
-		Recipient: notif.TelegramID,
+		Recipient: strconv.Itoa(notif.TelegramID),
 		Message:   fmt.Sprintf(domain.MessageCancelBookingTemplate, notif.BookingID, notif.EventID),
 	}
 

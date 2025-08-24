@@ -37,7 +37,8 @@ type BookResponse struct {
 type DelayedNotification struct {
 	NotificationID string
 	SendAt         *time.Time
-	TelegramID     string
+	TelegramID     int
+	UserID         string
 	EventID        string
 	BookingID      string
 }

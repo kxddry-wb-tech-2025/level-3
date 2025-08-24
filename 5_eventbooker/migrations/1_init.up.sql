@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS bookings (
 CREATE TABLE IF NOT EXISTS notifications (
 	id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
 	user_id UUID NOT NULL,
+    telegram_id BIGINT NOT NULL,
 	event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
 	booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
 	send_at TIMESTAMPTZ NOT NULL,

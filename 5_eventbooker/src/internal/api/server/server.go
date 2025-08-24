@@ -5,7 +5,6 @@ import (
 	"errors"
 	"eventbooker/src/internal/domain"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -18,7 +17,7 @@ import (
 type Usecase interface {
 	CreateEvent(ctx context.Context, event domain.CreateEventRequest) domain.CreateEventResponse
 	GetEvent(ctx context.Context, eventID string) domain.EventDetailsResponse
-	Book(ctx context.Context, eventID, userID, telegramID string) domain.BookResponse
+	Book(ctx context.Context, eventID, userID string, telegramID int) domain.BookResponse
 	Confirm(ctx context.Context, eventID, bookingID string) domain.ConfirmResponse
 }
 
@@ -115,7 +114,7 @@ func (s *Server) registerRoutes() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event ID"})
 			return
 		}
-		res := s.uc.Book(c.Request.Context(), eventID, req.UserID, strconv.Itoa(req.TelegramID))
+		res := s.uc.Book(c.Request.Context(), eventID, req.UserID, req.TelegramID)
 		if res.Error != "" {
 			s.log.Error().Err(errors.New(res.Error)).Msg("failed to book event")
 			c.JSON(http.StatusBadRequest, res)
