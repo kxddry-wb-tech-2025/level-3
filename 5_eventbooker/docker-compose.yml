@@ -122,12 +122,14 @@ services:
   # notifier service
   notifier:
     image: ghcr.io/kxddry-wb-tech-2025/level-3/1_delayed_notifier
+    container_name: notifier
     expose:
       - 8085
     environment:
       - CONFIG_PATH=/app/config.yaml
       - NOTIFY_OTHER_SERVICES=true
       - RABBITMQ_PASSWORD=$RABBITMQ_PASSWORD
+      - TELEGRAM_API_TOKEN=$TELEGRAM_API_TOKEN
     volumes:
       - ./configs/notifier.yaml:/app/config.yaml
     depends_on:

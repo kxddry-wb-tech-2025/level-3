@@ -345,6 +345,6 @@ window.viewEventDetails = viewEventDetails;
 
 document.getElementById('generate-uuid-btn').addEventListener('click', () => {
     const uuid = generateUUID();
-    document.getElementById('event-id-input').value = uuid;
+    document.getElementById('user-id').value = uuid;
     showMessage('Случайный UUID сгенерирован', 'success');
 });
