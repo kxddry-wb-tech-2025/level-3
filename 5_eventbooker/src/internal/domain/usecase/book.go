@@ -15,7 +15,7 @@ func (u *Usecase) Book(ctx context.Context, eventID, userID string, telegramID i
 	var bookingID string
 	var paymentDeadline time.Time
 	// begin transaction
-	err := u.storage.Do(ctx, func(ctx context.Context, tx Tx) error {
+	if err := u.storage.Do(ctx, func(ctx context.Context, tx Tx) error {
 		// get event
 		event, err := tx.GetEvent(ctx, eventID)
 		if err != nil {
@@ -44,6 +44,7 @@ func (u *Usecase) Book(ctx context.Context, eventID, userID string, telegramID i
 		notif := domain.DelayedNotification{
 			SendAt:     &paymentDeadline,
 			TelegramID: telegramID,
+			UserID:     userID,
 			EventID:    eventID,
 			BookingID:  bookingID,
 		}
@@ -68,8 +69,7 @@ func (u *Usecase) Book(ctx context.Context, eventID, userID string, telegramID i
 			}
 		}
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		u.log.Error().Err(err).Msg("failed to book event")
 		return domain.BookResponse{
 			Error: err.Error(),

@@ -24,8 +24,12 @@ type stubTx struct {
 func (s *stubTx) CreateEvent(ctx context.Context, event domain.CreateEventRequest) (string, error) {
 	return s.createEventFunc(ctx, event)
 }
-func (s *stubTx) UpdateEvent(ctx context.Context, event domain.Event) error { return s.updateEventFunc(ctx, event) }
-func (s *stubTx) GetEvent(ctx context.Context, eventID string) (domain.Event, error) { return s.getEventFunc(ctx, eventID) }
+func (s *stubTx) UpdateEvent(ctx context.Context, event domain.Event) error {
+	return s.updateEventFunc(ctx, event)
+}
+func (s *stubTx) GetEvent(ctx context.Context, eventID string) (domain.Event, error) {
+	return s.getEventFunc(ctx, eventID)
+}
 func (s *stubTx) Book(ctx context.Context, eventID, userID string, paymentDeadline time.Time) (string, error) {
 	return s.bookFunc(ctx, eventID, userID, paymentDeadline)
 }
@@ -50,7 +54,9 @@ func (s *stubTx) GetNotificationID(ctx context.Context, bookingID string) (strin
 func (s *stubTx) Commit() error   { return nil }
 func (s *stubTx) Rollback() error { return nil }
 
-type stubTxManager struct{ do func(ctx context.Context, fn func(ctx context.Context, tx Tx) error) error }
+type stubTxManager struct {
+	do func(ctx context.Context, fn func(ctx context.Context, tx Tx) error) error
+}
 
 func (m *stubTxManager) Do(ctx context.Context, fn func(ctx context.Context, tx Tx) error) error {
 	return m.do(ctx, fn)
@@ -64,9 +70,13 @@ type stubNotif struct {
 func (n *stubNotif) SendNotification(ctx context.Context, notif domain.DelayedNotification) (string, error) {
 	return n.send(ctx, notif)
 }
-func (n *stubNotif) CancelNotification(ctx context.Context, notificationID string) error { return n.canc(ctx, notificationID) }
+func (n *stubNotif) CancelNotification(ctx context.Context, notificationID string) error {
+	return n.canc(ctx, notificationID)
+}
 
-type stubCancel struct{ ch chan domain.CancelBookingEvent }
+type stubCancel struct {
+	ch chan domain.CancelBookingEvent
+}
 
 func (c *stubCancel) Messages(ctx context.Context) <-chan domain.CancelBookingEvent { return c.ch }
 
@@ -84,13 +94,13 @@ func TestCreateEvent_SuccessAndValidation(t *testing.T) {
 	}
 
 	// success
-	resp := uc.CreateEvent(ctx, domain.CreateEventRequest{Name: "n", Capacity: 10, Date: future, PaymentTTL: time.Hour})
+	resp := uc.CreateEvent(ctx, domain.CreateEventRequest{Name: "n", Capacity: 10, Date: future, PaymentTTL: 3600})
 	if resp.Error != "" || resp.ID != "event-id" {
 		t.Fatalf("unexpected response: %+v", resp)
 	}
 	// validation: past date
 	past := time.Now().Add(-time.Hour)
-	resp = uc.CreateEvent(ctx, domain.CreateEventRequest{Name: "n", Capacity: 10, Date: past, PaymentTTL: time.Hour})
+	resp = uc.CreateEvent(ctx, domain.CreateEventRequest{Name: "n", Capacity: 10, Date: past, PaymentTTL: 3600})
 	if resp.Error == "" {
 		t.Fatalf("expected validation error for past date")
 	}
@@ -101,7 +111,7 @@ func TestGetEvent_SuccessAndError(t *testing.T) {
 	date := time.Now().Add(48 * time.Hour)
 	uc := &Usecase{storage: &stubTxManager{do: func(ctx context.Context, fn func(ctx context.Context, tx Tx) error) error {
 		return fn(ctx, &stubTx{getEventFunc: func(ctx context.Context, eventID string) (domain.Event, error) {
-			return domain.Event{ID: eventID, Name: "name", Capacity: 100, Available: 90, Date: &date, PaymentTTL: time.Hour}, nil
+			return domain.Event{ID: eventID, Name: "name", Capacity: 100, Available: 90, Date: &date, PaymentTTL: 3600}, nil
 		}})
 	}}}
 	resp := uc.GetEvent(ctx, "event-1")
@@ -122,7 +132,7 @@ func TestBook_Flows(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 	future := now.Add(2 * time.Hour)
-	event := domain.Event{ID: "e1", Name: "n", Capacity: 100, Available: 5, Date: &future, PaymentTTL: time.Hour}
+	event := domain.Event{ID: "e1", Name: "n", Capacity: 100, Available: 5, Date: &future, PaymentTTL: 3600}
 
 	// success path, notification succeeds and decrements
 	uc := &Usecase{
@@ -130,14 +140,16 @@ func TestBook_Flows(t *testing.T) {
 		storage: &stubTxManager{do: func(ctx context.Context, fn func(ctx context.Context, tx Tx) error) error {
 			return fn(ctx, &stubTx{
 				getEventFunc: func(ctx context.Context, eventID string) (domain.Event, error) { return event, nil },
-				bookFunc: func(ctx context.Context, eventID, userID string, paymentDeadline time.Time) (string, error) { return "b1", nil },
-				updateEventFunc: func(ctx context.Context, event domain.Event) error { return nil },
+				bookFunc: func(ctx context.Context, eventID, userID string, paymentDeadline time.Time) (string, error) {
+					return "b1", nil
+				},
+				updateEventFunc:           func(ctx context.Context, event domain.Event) error { return nil },
 				bookingSetDecrementedFunc: func(ctx context.Context, bookingID string, decremented bool) error { return nil },
-				addNotificationFunc: func(ctx context.Context, notif domain.DelayedNotification) error { return nil },
+				addNotificationFunc:       func(ctx context.Context, notif domain.DelayedNotification) error { return nil },
 			})
 		}},
 	}
-	resp := uc.Book(ctx, "e1", "u1")
+	resp := uc.Book(ctx, "e1", "u1", 123456789)
 	if resp.Error != "" || resp.ID != "b1" || resp.PaymentDeadline == nil {
 		t.Fatalf("unexpected response: %+v", resp)
 	}
@@ -148,7 +160,7 @@ func TestBook_Flows(t *testing.T) {
 	uc.storage = &stubTxManager{do: func(ctx context.Context, fn func(ctx context.Context, tx Tx) error) error {
 		return fn(ctx, &stubTx{getEventFunc: func(ctx context.Context, eventID string) (domain.Event, error) { return eventFull, nil }})
 	}}
-	resp = uc.Book(ctx, "e1", "u1")
+	resp = uc.Book(ctx, "e1", "u1", 123456789)
 	if resp.Error == "" {
 		t.Fatalf("expected error for full event")
 	}
@@ -160,7 +172,7 @@ func TestBook_Flows(t *testing.T) {
 	uc.storage = &stubTxManager{do: func(ctx context.Context, fn func(ctx context.Context, tx Tx) error) error {
 		return fn(ctx, &stubTx{getEventFunc: func(ctx context.Context, eventID string) (domain.Event, error) { return eventPast, nil }})
 	}}
-	resp = uc.Book(ctx, "e1", "u1")
+	resp = uc.Book(ctx, "e1", "u1", 123456789)
 	if resp.Error == "" {
 		t.Fatalf("expected error for past event")
 	}
