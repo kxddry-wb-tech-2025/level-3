@@ -74,7 +74,7 @@ document.getElementById('create-event-form').addEventListener('submit', async (e
         name: document.getElementById('event-name').value,
         date: new Date(document.getElementById('event-date').value).toISOString(),
         capacity: parseInt(document.getElementById('event-capacity').value),
-        booking_ttl: parseInt(document.getElementById('booking-ttl').value) || 300
+        payment_ttl: parseInt(document.getElementById('payment-ttl').value) || 300
     };
     
     try {
@@ -97,7 +97,7 @@ document.getElementById('create-event-form').addEventListener('submit', async (e
                 name: formData.name,
                 date: formData.date,
                 capacity: formData.capacity,
-                booking_ttl: formData.booking_ttl
+                payment_ttl: formData.payment_ttl
             };
             
             createdEvents.unshift(newEvent);
@@ -106,7 +106,7 @@ document.getElementById('create-event-form').addEventListener('submit', async (e
             
             // Reset form
             document.getElementById('create-event-form').reset();
-            document.getElementById('booking-ttl').value = '300';
+            document.getElementById('payment-ttl').value = '300';
         } else {
             showMessage(data.error || 'Ошибка при создании мероприятия', 'error');
         }
