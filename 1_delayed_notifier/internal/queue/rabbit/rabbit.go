@@ -7,6 +7,7 @@ import (
 
 	"delayed-notifier/internal/models"
 
+	"github.com/kxddry/wbf/zlog"
 	amqp091 "github.com/rabbitmq/amqp091-go"
 )
 
@@ -68,7 +69,8 @@ func NewRabbit(cfg RabbitConfig) (*Rabbit, error) {
 
 // Publish sends a persistent JSON message to the configured queue.
 func (r *Rabbit) Publish(ctx context.Context, body []byte) error {
-	return r.ch.PublishWithContext(ctx,
+	log := zlog.Logger.With().Str("component", "rabbit").Logger()
+	if err := r.ch.PublishWithContext(ctx,
 		"",
 		r.queueName,
 		false,
@@ -79,11 +81,16 @@ func (r *Rabbit) Publish(ctx context.Context, body []byte) error {
 			Timestamp:    time.Now(),
 			Body:         body,
 		},
-	)
+	); err != nil {
+		log.Error().Err(err).Msg("failed to publish message")
+		return err
+	}
+	return nil
 }
 
 // Consume returns a channel of deliveries that implements models.Delivery.
 func (r *Rabbit) Consume(ctx context.Context) (<-chan models.Delivery, error) {
+	log := zlog.Logger.With().Str("component", "rabbit").Logger()
 	msgs, err := r.ch.Consume(
 		r.queueName,
 		"",
@@ -94,6 +101,7 @@ func (r *Rabbit) Consume(ctx context.Context) (<-chan models.Delivery, error) {
 		amqp091.Table{},
 	)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to consume message")
 		return nil, err
 	}
 	out := make(chan models.Delivery)
@@ -109,6 +117,7 @@ func (r *Rabbit) Consume(ctx context.Context) (<-chan models.Delivery, error) {
 				}
 				dd := d
 				out <- amqpDelivery{d: &dd}
+				log.Debug().Any("message", d).Msg("consumed message")
 			}
 		}
 	}()
@@ -117,11 +126,15 @@ func (r *Rabbit) Consume(ctx context.Context) (<-chan models.Delivery, error) {
 
 // Close terminates channel and connection.
 func (r *Rabbit) Close() error {
+	log := zlog.Logger.With().Str("component", "rabbit").Logger()
 	if r.ch != nil {
 		r.ch.Close()
 	}
 	if r.conn != nil {
-		return r.conn.Close()
+		if err := r.conn.Close(); err != nil {
+			log.Error().Err(err).Msg("failed to close connection")
+			return err
+		}
 	}
 	return nil
 }

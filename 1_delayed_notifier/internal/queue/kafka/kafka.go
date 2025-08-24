@@ -57,11 +57,16 @@ func New(ctx context.Context, brokers []string, topic string) (*Producer, error)
 }
 
 func (p *Producer) Publish(ctx context.Context, n models.NotificationKafka) error {
+	log := zlog.Logger.With().Str("component", "kafka").Logger()
 	msg := kafka.Message{
 		Key:   []byte(n.NotificationID),
 		Value: []byte(n.Message),
 	}
-	return p.prod.WriteMessages(ctx, msg)
+	if err := p.prod.WriteMessages(ctx, msg); err != nil {
+		log.Error().Err(err).Msg("failed to publish message")
+		return err
+	}
+	return nil
 }
 
 func (p *Producer) Close() error {

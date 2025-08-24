@@ -79,16 +79,20 @@ func (s *Storage) CreateNotification(ctx context.Context, n *models.Notification
 
 // GetNotification returns a notification by id or nil if not found.
 func (s *Storage) GetNotification(ctx context.Context, id string) (*models.Notification, error) {
+	log := zlog.Logger.With().Str("component", "redis").Logger()
+
 	key := fmt.Sprintf(keyNotificationObj, id)
 	val, err := s.client.Get(ctx, key).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
+			log.Debug().Str("id", id).Msg("notification not found")
 			return nil, nil
 		}
 		return nil, err
 	}
 	var n models.Notification
 	if err := json.Unmarshal(val, &n); err != nil {
+		log.Error().Err(err).Msg("failed to unmarshal notification")
 		return nil, err
 	}
 	return &n, nil
@@ -96,11 +100,13 @@ func (s *Storage) GetNotification(ctx context.Context, id string) (*models.Notif
 
 // CancelNotification sets status to cancelled and removes it from scheduling sets.
 func (s *Storage) CancelNotification(ctx context.Context, id string) error {
+	log := zlog.Logger.With().Str("component", "redis").Logger()
 	n, err := s.GetNotification(ctx, id)
 	if err != nil {
 		return err
 	}
 	if n == nil {
+		log.Debug().Str("id", id).Msg("notification not found")
 		return nil
 	}
 	n.Status = models.StatusCancelled
@@ -112,6 +118,10 @@ func (s *Storage) CancelNotification(ctx context.Context, id string) error {
 	pipe.ZRem(ctx, keyDueZSet, id)
 	pipe.ZRem(ctx, keyRetryZSet, id)
 	_, err = pipe.Exec(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to exec pipeline")
+		return err
+	}
 	return err
 }
 
@@ -127,6 +137,8 @@ func (s *Storage) AddToRetry(ctx context.Context, id string, when time.Time) err
 
 // PopDue pops up to 'limit' ids due at or before 'now' from the given zset key.
 func (s *Storage) PopDue(ctx context.Context, which string, now time.Time, limit int64) ([]string, error) {
+	log := zlog.Logger.With().Str("component", "redis").Logger()
+
 	var zsetKey string
 	switch which {
 	case "due":
@@ -143,14 +155,17 @@ func (s *Storage) PopDue(ctx context.Context, which string, now time.Time, limit
 		Count:  limit,
 	}).Result()
 	if err != nil {
+		log.Error().Err(err).Msg("failed to ZRangeByScore")
 		return nil, err
 	}
 	if len(vals) == 0 {
+		log.Debug().Msg("no due ids found")
 		return nil, nil
 	}
 	if err := s.client.ZRem(ctx, zsetKey, anySlice(vals)...).Err(); err != nil {
-		zlog.Logger.Warn().Err(err).Msg("failed to ZREM due ids; possible duplicates may occur")
+		log.Error().Err(err).Msg("failed to ZREM due ids; possible duplicates may occur")
 	}
+	log.Debug().Int("count", len(vals)).Msg("popped due ids")
 	return vals, nil
 }
 

@@ -21,6 +21,7 @@ func NewNotifier(producer Producer) *Notifier {
 }
 
 func (n *Notifier) Notify(ctx context.Context, in <-chan models.NotificationKafka) {
+	log := zlog.Logger.With().Str("component", "servicenotifier").Logger()
 	for {
 		select {
 		case <-ctx.Done():
@@ -29,7 +30,9 @@ func (n *Notifier) Notify(ctx context.Context, in <-chan models.NotificationKafk
 				return
 			}
 			if err := n.prod.Publish(ctx, nk); err != nil {
-				zlog.Logger.Error().Err(err).Msg("failed to publish notification")
+				log.Error().Err(err).Msg("failed to publish notification")
+			} else {
+				log.Debug().Any("notification", nk).Msg("published notification")
 			}
 		}
 	}
