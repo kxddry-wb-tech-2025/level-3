@@ -6,10 +6,10 @@ import "time"
 
 // CreateEventRequest is the request body for creating an event.
 type CreateEventRequest struct {
-	Date       time.Time     `json:"date,omitempty" validate:"required" format:"rfc3339"`
-	Capacity   int64         `json:"capacity,omitempty" validate:"required,min=1,max=8589934592"`
-	Name       string        `json:"name,omitempty" validate:"required,min=1,max=255"`
-	PaymentTTL time.Duration `json:"payment_ttl,omitempty" validate:"required" format:"duration"`
+	Date       time.Time `json:"date,omitempty" validate:"required" format:"rfc3339"`
+	Capacity   int64     `json:"capacity,omitempty" validate:"required,min=1,max=8589934592"`
+	Name       string    `json:"name,omitempty" validate:"required,min=1,max=255"`
+	PaymentTTL int       `json:"payment_ttl,omitempty" validate:"required,min=1,max=2592000"`
 }
 
 // CreateEventResponse is the response body for creating an event.
@@ -54,12 +54,12 @@ type ConfirmResponse struct {
 
 // EventDetailsResponse is the response body for getting event details.
 type EventDetailsResponse struct {
-	Name       string        `json:"name,omitempty"`
-	Available  int64         `json:"available,omitempty"`
-	Capacity   int64         `json:"capacity,omitempty"`
-	Date       *time.Time    `json:"date,omitempty"`
-	PaymentTTL time.Duration `json:"payment_ttl,omitempty"`
-	Error      string        `json:"error,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	Available  int64      `json:"available,omitempty"`
+	Capacity   int64      `json:"capacity,omitempty"`
+	Date       *time.Time `json:"date,omitempty"`
+	PaymentTTL int        `json:"payment_ttl,omitempty"`
+	Error      string     `json:"error,omitempty"`
 }
 
 // Booking is the value object for a booking cache.
@@ -74,12 +74,12 @@ type Booking struct {
 
 // Event is the value object for an event.
 type Event struct {
-	ID         string        `json:"id,omitempty"`
-	Name       string        `json:"name,omitempty"`
-	Capacity   int64         `json:"capacity,omitempty"`
-	Available  int64         `json:"available,omitempty"`
-	Date       *time.Time    `json:"date,omitempty" format:"rfc3339"`
-	PaymentTTL time.Duration `json:"payment_ttl,omitempty"`
+	ID         string     `json:"id,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	Capacity   int64      `json:"capacity,omitempty"`
+	Available  int64      `json:"available,omitempty"`
+	Date       *time.Time `json:"date,omitempty" format:"rfc3339"`
+	PaymentTTL int        `json:"payment_ttl,omitempty"`
 }
 
 // BookingStatus is the status of a booking.

@@ -30,7 +30,7 @@ func (u *Usecase) Book(ctx context.Context, eventID string, userID string) domai
 			return errors.New("event is in the past")
 		}
 		// set payment deadline
-		paymentDeadline = time.Now().Add(event.PaymentTTL)
+		paymentDeadline = time.Now().Add(time.Duration(event.PaymentTTL) * time.Second)
 		// book event
 		bookingID, err = tx.Book(ctx, eventID, userID, paymentDeadline)
 		if err != nil {
