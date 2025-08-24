@@ -22,6 +22,10 @@ services:
     volumes:
       - ./config.editor.yaml:/app/config.editor.yaml
       - ./static:/app/static
+<<<<<<< HEAD
+=======
+  
+>>>>>>> dev
   postgres:
     image: postgres:17
     container_name: postgres

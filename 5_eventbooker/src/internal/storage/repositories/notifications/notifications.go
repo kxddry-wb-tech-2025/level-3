@@ -1,0 +1,64 @@
+package notifications
+
+import (
+	"context"
+	"eventbooker/src/internal/domain"
+	"eventbooker/src/internal/storage"
+
+	"github.com/kxddry/wbf/dbpg"
+)
+
+// NotificationRepository is the repository for the notifications.
+type NotificationRepository struct {
+	db *dbpg.DB
+}
+
+// New is the constructor for the NotificationRepository.
+// It is responsible for creating a new NotificationRepository.
+func New(masterDSN string, slaveDSNs ...string) (*NotificationRepository, error) {
+	db, err := dbpg.New(masterDSN, slaveDSNs, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &NotificationRepository{db: db}, nil
+}
+
+func (r *NotificationRepository) Close() error {
+	for _, slave := range r.db.Slaves {
+		_ = slave.Close()
+	}
+	return r.db.Master.Close()
+}
+
+// AddNotification is the method for adding a notification to the database.
+func (r *NotificationRepository) AddNotification(ctx context.Context, notif domain.DelayedNotification) error {
+	if tx, ok := storage.TxFromContext(ctx); ok {
+		if err := tx.QueryRowContext(ctx, `INSERT INTO notifications (id, user_id, telegram_id, event_id, booking_id, send_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+			notif.NotificationID, notif.UserID, notif.TelegramID, notif.EventID, notif.BookingID, notif.SendAt).Err(); err != nil {
+			return err
+		}
+		return nil
+	}
+	err := r.db.Master.QueryRowContext(ctx, `INSERT INTO notifications (id, user_id, telegram_id, event_id, booking_id, send_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+		notif.NotificationID, notif.UserID, notif.TelegramID, notif.EventID, notif.BookingID, notif.SendAt).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetNotificationID is the method for getting a notification ID from the database by booking ID.
+func (r *NotificationRepository) GetNotificationID(ctx context.Context, bookingID string) (string, error) {
+	var id string
+	if tx, ok := storage.TxFromContext(ctx); ok {
+		if err := tx.QueryRowContext(ctx, `SELECT id FROM notifications WHERE booking_id = $1`, bookingID).Scan(&id); err != nil {
+			return "", err
+		}
+		return id, nil
+	}
+	err := r.db.Master.QueryRowContext(ctx, `SELECT id FROM notifications WHERE booking_id = $1`, bookingID).Scan(&id)
+	if err != nil {
+		return "", err
+	}
+	return id, nil
+}

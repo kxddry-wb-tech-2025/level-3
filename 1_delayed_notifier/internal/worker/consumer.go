@@ -18,7 +18,7 @@ type ConsumerQueue interface {
 
 // Sender sends a notification via a channel.
 type Sender interface {
-	Send(ctx context.Context, n *models.Notification) error
+	Send(ctx context.Context, n models.Notification) error
 }
 
 // Consumer processes messages from the queue and delivers notifications.
@@ -41,40 +41,64 @@ func NewConsumer(store storageAccess, q ConsumerQueue, s Sender) *Consumer {
 }
 
 // Run starts consumption loop until ctx is cancelled.
-func (c *Consumer) Run(ctx context.Context) {
+// Returns a channel of notifications processed the first time.
+// It might be useful for the metrics for some people. I'm using it for another project.
+func (c *Consumer) Run(ctx context.Context) (<-chan models.NotificationKafka, error) {
 	msgs, err := c.q.Consume(ctx)
 	if err != nil {
 		zlog.Logger.Error().Err(err).Msg("consumer: failed to start consuming")
-		return
+		return nil, err
 	}
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case d, ok := <-msgs:
-			if !ok {
+	log := zlog.Logger.With().Str("component", "consumer").Logger()
+	out := make(chan models.NotificationKafka, 100)
+
+	go func() {
+		defer close(out)
+		for {
+			select {
+			case <-ctx.Done():
 				return
+			case d, ok := <-msgs:
+				if !ok {
+					return
+				}
+				log.Debug().Any("delivery", d).Msg("consumer: received delivery")
+				c.processDelivery(ctx, d, out)
 			}
-			c.processDelivery(ctx, d)
 		}
-	}
+	}()
+
+	return out, nil
 }
 
-func (c *Consumer) processDelivery(ctx context.Context, d models.Delivery) {
+// processDelivery processes a delivery and sends the notification to the output channel.
+// the output channel MUST be ready to receive and process notifications.
+func (c *Consumer) processDelivery(ctx context.Context, d models.Delivery, out chan<- models.NotificationKafka) {
+	log := zlog.Logger.With().Str("component", "consumer").Logger()
 	var n models.Notification
 	if err := json.Unmarshal(d.Body(), &n); err != nil {
 		_ = d.Nack(false)
-		zlog.Logger.Error().Err(err).Msg("consumer: bad payload")
+		log.Error().Err(err).Msg("consumer: bad payload")
 		return
 	}
 	if n.Status == models.StatusCancelled {
 		_ = d.Ack()
 		return
 	}
+	if n.RetryCount == 0 {
+		select {
+		case <-ctx.Done():
+			return
+		case out <- models.NotificationKafka{
+			NotificationID: n.ID,
+			Message:        n.Message,
+		}:
+		}
+	}
 	// send via sender with short retry strategy; schedule long retry if still failing
 	short := retry.Strategy{Attempts: 3, Delay: 10 * time.Millisecond, Backoff: 2}
-	if err := retry.Do(func() error { return c.sender.Send(ctx, &n) }, short); err != nil {
-		zlog.Logger.Error().Err(err).Str("id", n.ID).Msg("consumer: send failed")
+	if err := retry.Do(func() error { return c.sender.Send(ctx, n) }, short); err != nil {
+		log.Error().Err(err).Str("id", n.ID).Msg("consumer: send failed")
 		n.Status = models.StatusRetrying
 		n.RetryCount++
 		next := time.Now().Add(computeBackoff(n.RetryCount)).UTC()

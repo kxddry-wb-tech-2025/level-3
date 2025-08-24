@@ -1,6 +1,6 @@
 server:
   host: "0.0.0.0"
-  port: 8080
+  port: 8085
   static_dir: "./static"
 
 redis:
@@ -12,15 +12,18 @@ redis:
 rabbitmq:
   host: "localhost"
   port: 5672
-  username: "guest"
-  password: "guest"
+  username: "user"
+  password: $RABBITMQ_PASSWORD
   queue_name: "delayed_notifications"
 
 telegram:
   # Leave empty and set TELEGRAM_BOT_TOKEN env var in production.
-  bot_token: ""
   timeout: 30
 
 logging:
   level: "info"
   format: "json"
+
+kafka:
+  broker: "localhost:29092"
+  topic: "sent_notifications"
