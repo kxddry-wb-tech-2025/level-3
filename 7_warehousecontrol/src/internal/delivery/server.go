@@ -14,9 +14,9 @@ import (
 )
 
 type Service interface {
-	CreateItem(ctx context.Context, req models.PostItemRequest, role models.Role, userID string) (models.Item, error)
+	CreateItem(ctx context.Context, req models.PostItemRequest, role models.Role, userID string) (*models.Item, error)
 	GetItems(ctx context.Context) ([]models.Item, error)
-	UpdateItem(ctx context.Context, req models.PutItemRequest, role models.Role, userID string) (models.Item, error)
+	UpdateItem(ctx context.Context, req models.PutItemRequest, role models.Role, userID string) (*models.Item, error)
 	DeleteItem(ctx context.Context, id string, userID string, role models.Role) error
 }
 

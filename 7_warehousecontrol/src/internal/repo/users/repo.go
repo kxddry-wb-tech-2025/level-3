@@ -22,7 +22,7 @@ func New(masterDSN string, slaveDSNs ...string) (*Repository, error) {
 	return &Repository{db: db}, db.Master.Ping()
 }
 
-func (r *Repository) CreateUser(ctx context.Context, role string) (id string, err error) {
+func (r *Repository) CreateUser(ctx context.Context, role models.Role) (id string, err error) {
 	query := `
 		INSERT INTO users (role) VALUES ($1) RETURNING id
 	`
@@ -31,7 +31,7 @@ func (r *Repository) CreateUser(ctx context.Context, role string) (id string, er
 	return
 }
 
-func (r *Repository) GetRole(ctx context.Context, id string) (role string, err error) {
+func (r *Repository) GetRole(ctx context.Context, id string) (role models.Role, err error) {
 	query := `
 		SELECT role FROM users WHERE id = $1
 	`
@@ -39,10 +39,18 @@ func (r *Repository) GetRole(ctx context.Context, id string) (role string, err e
 	err = r.db.Master.QueryRowContext(ctx, query, id).Scan(&role)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", models.ErrUserNotFound
+			return 0, models.ErrUserNotFound
 		}
-		return "", err
+		return 0, err
 	}
 
 	return
+}
+
+func (r *Repository) Close() error {
+	for _, db := range r.db.Slaves {
+		_ = db.Close()
+	}
+
+	return r.db.Master.Close()
 }
