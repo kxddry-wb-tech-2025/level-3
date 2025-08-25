@@ -379,6 +379,7 @@ async function handleAddItem(e) {
     if (!validateItem(item)) return;
 
     try {
+        item.date = new Date(item.date).toISOString();
         await createItem(item);
         showAlert('Item created successfully!', 'success');
         resetForm();
@@ -410,6 +411,7 @@ async function handleUpdateItem(e) {
     if (!validateItem(item)) return;
 
     try {
+        item.date = new Date(item.date).toISOString();
         await updateItem(currentEditId, item);
         showAlert('Item updated successfully!', 'success');
         closeModal('edit-modal');

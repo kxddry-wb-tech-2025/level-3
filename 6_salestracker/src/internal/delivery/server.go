@@ -161,7 +161,7 @@ func (s *Server) registerRoutes() {
 		fromStr := c.Query("from")
 		toStr := c.Query("to")
 		if fromStr != "" {
-			fromTime, err := time.Parse(time.RFC3339, fromStr)
+			fromTime, err := time.Parse("2006-01-02T15:04", fromStr)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid from date"})
 				return
@@ -169,7 +169,7 @@ func (s *Server) registerRoutes() {
 			from = &fromTime
 		}
 		if toStr != "" {
-			toTime, err := time.Parse(time.RFC3339, toStr)
+			toTime, err := time.Parse("2006-01-02T15:04:05Z", toStr)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid to date"})
 				return
