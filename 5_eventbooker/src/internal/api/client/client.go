@@ -41,7 +41,7 @@ func (c *Client) SendNotification(ctx context.Context, notif domain.DelayedNotif
 	req := SendNotificationRequest{
 		SendAt:    notif.SendAt,
 		Channel:   "telegram",
-		Recipient: strconv.Itoa(notif.TelegramID),
+		Recipient: strconv.FormatInt(notif.TelegramID, 10),
 		Message:   fmt.Sprintf(domain.MessageCancelBookingTemplate, notif.BookingID, notif.EventID),
 	}
 

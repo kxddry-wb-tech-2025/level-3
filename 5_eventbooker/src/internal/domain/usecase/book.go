@@ -11,7 +11,7 @@ import (
 
 // Book is the set of actions required to run the booking process.
 // It is responsible for booking an event, sending a delayed notification, and decrementing the event's available capacity.
-func (u *Usecase) Book(ctx context.Context, eventID, userID string, telegramID int) domain.BookResponse {
+func (u *Usecase) Book(ctx context.Context, eventID, userID string, telegramID int64) domain.BookResponse {
 	var bookingID string
 	var paymentDeadline time.Time
 	// begin transaction

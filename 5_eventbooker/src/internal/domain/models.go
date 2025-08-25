@@ -25,7 +25,7 @@ type CreateEventResponse struct {
 // BookRequest is the request body for booking an event.
 type BookRequest struct {
 	UserID     string `json:"user_id" validate:"required,uuid"`
-	TelegramID int    `json:"telegram_id" validate:"required,min=100000000,max=999999999"`
+	TelegramID int64  `json:"telegram_id" validate:"required,min=100,max=9999999999999"`
 }
 
 // BookResponse is the response body for booking an event.
@@ -41,7 +41,7 @@ type BookResponse struct {
 type DelayedNotification struct {
 	NotificationID string
 	SendAt         *time.Time
-	TelegramID     int
+	TelegramID     int64
 	UserID         string
 	EventID        string
 	BookingID      string

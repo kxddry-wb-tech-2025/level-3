@@ -18,7 +18,7 @@ import (
 type Usecase interface {
 	CreateEvent(ctx context.Context, event domain.CreateEventRequest) domain.CreateEventResponse
 	GetEvent(ctx context.Context, eventID string) domain.EventDetailsResponse
-	Book(ctx context.Context, eventID, userID string, telegramID int) domain.BookResponse
+	Book(ctx context.Context, eventID, userID string, telegramID int64) domain.BookResponse
 	Confirm(ctx context.Context, eventID, bookingID string) domain.ConfirmResponse
 }
 
