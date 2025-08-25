@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"time"
 )
 
@@ -13,6 +12,10 @@ type Item struct {
 	Date        time.Time `json:"date"`
 }
 
-var (
-	ErrItemNotFound = errors.New("item not found")
-)
+type Analytics struct {
+	Sum          int     `json:"sum"`
+	Count        int     `json:"count"`
+	Average      float64 `json:"average"`
+	Median       float64 `json:"median"`
+	Percentile90 float64 `json:"percentile_90"`
+}

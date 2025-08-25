@@ -17,6 +17,7 @@ type Service interface {
 	GetItems(ctx context.Context) ([]models.Item, error)
 	PutItem(ctx context.Context, id string, req models.PutRequest) (models.PutResponse, error)
 	DeleteItem(ctx context.Context, id string) error
+	GetAnalytics(ctx context.Context) (models.Analytics, error)
 }
 
 // Server is a struct that contains the router.
@@ -127,4 +128,20 @@ func (s *Server) registerRoutes() {
 		c.Status(http.StatusNoContent)
 	})
 
+	r.GET("/analytics", func(c *ginext.Context) {
+		analytics, err := s.svc.GetAnalytics(c.Request.Context())
+		if err != nil {
+			var status int
+			if errors.Is(err, models.ErrItemNotFound) {
+				status = http.StatusNotFound
+			} else {
+				status = http.StatusInternalServerError
+			}
+
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, analytics)
+	})
 }
