@@ -5,19 +5,22 @@ import (
 	"errors"
 	"net/http"
 	"salestracker/src/internal/models"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/kxddry/wbf/ginext"
+	"github.com/wb-go/wbf/zlog"
 )
 
+// Service is an interface that contains the usecase methods.
 type Service interface {
 	PostItem(ctx context.Context, req models.PostRequest) (models.PostResponse, error)
 	GetItems(ctx context.Context) ([]models.Item, error)
 	PutItem(ctx context.Context, id string, req models.PutRequest) (models.PutResponse, error)
 	DeleteItem(ctx context.Context, id string) error
-	GetAnalytics(ctx context.Context) (models.Analytics, error)
+	GetAnalytics(ctx context.Context, from, to *time.Time) (models.Analytics, error)
 }
 
 // Server is a struct that contains the router.
@@ -27,7 +30,8 @@ type Server struct {
 	v   *validator.Validate
 }
 
-func New(svc Service) *Server {
+// New creates a new server.
+func New(svc Service, staticDir string) *Server {
 	r := ginext.New()
 	v := validator.New()
 	srv := &Server{
@@ -36,11 +40,25 @@ func New(svc Service) *Server {
 		v:   v,
 	}
 
+	if staticDir != "" {
+		r.StaticFS("/ui", http.Dir(staticDir))
+	}
+
 	srv.registerRoutes()
 
 	return srv
 }
 
+// Run runs the server.
+func (s *Server) Run(addrs ...string) error {
+	if len(addrs) == 0 {
+		addrs = []string{":8080"}
+	}
+	zlog.Logger.Info().Msgf("starting server on %s", addrs[0])
+	return s.r.Run(addrs...)
+}
+
+// registerRoutes registers the routes for the server.
 func (s *Server) registerRoutes() {
 	r := s.r.Group("/api/v1")
 
@@ -129,7 +147,27 @@ func (s *Server) registerRoutes() {
 	})
 
 	r.GET("/analytics", func(c *ginext.Context) {
-		analytics, err := s.svc.GetAnalytics(c.Request.Context())
+		var from, to *time.Time
+		fromStr := c.Query("from")
+		toStr := c.Query("to")
+		if fromStr != "" {
+			fromTime, err := time.Parse(time.RFC3339, fromStr)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid from date"})
+				return
+			}
+			from = &fromTime
+		}
+		if toStr != "" {
+			toTime, err := time.Parse(time.RFC3339, toStr)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid to date"})
+				return
+			}
+			to = &toTime
+		}
+
+		analytics, err := s.svc.GetAnalytics(c.Request.Context(), from, to)
 		if err != nil {
 			var status int
 			if errors.Is(err, models.ErrItemNotFound) {

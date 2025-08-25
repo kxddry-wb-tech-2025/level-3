@@ -1,9 +1,14 @@
 package config
 
-import "github.com/ilyakaznacheev/cleanenv"
+import (
+	"fmt"
+
+	"github.com/ilyakaznacheev/cleanenv"
+)
 
 type Config struct {
 	Storage StorageConfig `yaml:"storage"`
+	Server  ServerConfig  `yaml:"server"`
 }
 
 type StorageConfig struct {
@@ -12,6 +17,12 @@ type StorageConfig struct {
 	Username string `yaml:"username" env:"STORAGE_USERNAME" env-required:"true"`
 	Password string `yaml:"password" env:"STORAGE_PASSWORD" env-required:"true"`
 	Database string `yaml:"database" env:"STORAGE_DATABASE" env-required:"true"`
+	SSLMode  string `yaml:"sslmode" env:"STORAGE_SSLMODE" env-required:"true"`
+}
+
+type ServerConfig struct {
+	Addrs     []string `yaml:"addrs" env-required:"false"`
+	StaticDir string   `yaml:"static_dir" env-required:"false"`
 }
 
 func New(path string) (*Config, error) {
@@ -26,4 +37,8 @@ func New(path string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func (c *Config) GetMasterDSN() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", c.Storage.Username, c.Storage.Password, c.Storage.Host, c.Storage.Port, c.Storage.Database, c.Storage.SSLMode)
 }
