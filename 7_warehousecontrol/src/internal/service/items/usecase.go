@@ -7,7 +7,7 @@ import (
 )
 
 type Repository interface {
-	CreateItem(ctx context.Context, req models.PostItemRequest, role models.Role, userID string) (id string, err error)
+	CreateItem(ctx context.Context, req models.PostItemRequest, userID string) (id string, err error)
 	GetItems(ctx context.Context) ([]models.Item, error)
 	GetItem(ctx context.Context, id string) (models.Item, error)
 	UpdateItem(ctx context.Context, req models.PutItemRequest, userID string) error
@@ -23,12 +23,11 @@ func NewUsecase(repo Repository) *Usecase {
 }
 
 func (u *Usecase) CreateItem(ctx context.Context, req models.PostItemRequest, role models.Role, userID string) (*models.Item, error) {
-	var id string
 	if role != models.RoleAdmin {
 		return nil, fmt.Errorf("unauthorized")
 	}
 
-	id, err := u.repo.CreateItem(ctx, req, role, userID)
+	id, err := u.repo.CreateItem(ctx, req, userID)
 	if err != nil {
 		return nil, err
 	}
