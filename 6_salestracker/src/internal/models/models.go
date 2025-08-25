@@ -10,6 +10,7 @@ type Item struct {
 	Price       int       `json:"price"`
 	Description string    `json:"description"`
 	Date        time.Time `json:"date"`
+	Category    string    `json:"category"`
 }
 
 type Analytics struct {
