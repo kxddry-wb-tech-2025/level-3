@@ -7,6 +7,7 @@ import (
 	"salestracker/src/internal/models"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -39,6 +40,15 @@ func New(svc Service, staticDir string) *Server {
 		svc: svc,
 		v:   v,
 	}
+
+	r.Use(gin.Recovery())
+	r.Use(gin.Logger())
+	r.Use(gin.ErrorLogger())
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders: []string{"Content-Type"},
+	}))
 
 	if staticDir != "" {
 		r.StaticFS("/ui", http.Dir(staticDir))

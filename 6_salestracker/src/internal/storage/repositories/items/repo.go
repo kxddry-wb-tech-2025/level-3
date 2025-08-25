@@ -158,11 +158,11 @@ func (r *Repository) Analytics(ctx context.Context, from, to *time.Time) (models
 	log := zlog.Logger.With().Str("component", "items").Logger().With().Str("operation", "Analytics").Logger()
 	query := `
 	SELECT 
-		SUM(price) AS sum, 
+		COALESCE(SUM(price), 0) AS sum, 
 		COUNT(*) AS count, 
-		AVG(price) AS average, 
-		PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) AS median, 
-		PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY price) AS percentile_90 FROM items
+		COALESCE(AVG(price), 0) AS average, 
+		COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price), 0) AS median, 
+		COALESCE(PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY price), 0) AS percentile_90 FROM items
 		WHERE item_date BETWEEN $1 AND $2
 	`
 	var err error
