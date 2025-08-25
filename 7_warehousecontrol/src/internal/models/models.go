@@ -20,13 +20,15 @@ type PostItemRequest struct {
 // PutItemRequest is the request body for the put item endpoint
 type PutItemRequest Item
 
-var (
-	RoleAdmin   = "admin"
-	RoleUser    = "user"
-	RoleManager = "manager" // can only manage items
+type Role int
+
+const (
+	RoleUser Role = iota + 1
+	RoleManager
+	RoleAdmin
 )
 
 type User struct {
 	ID   string `json:"id"`
-	Role string `json:"role"`
+	Role Role   `json:"role"`
 }
