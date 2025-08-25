@@ -39,11 +39,11 @@ func RegisterRoutes(ctx context.Context, r *ginext.Engine, store *redis.Storage)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "channel, recipient and message are required"})
 			return
 		}
-		// Validate telegram recipient: must be exactly 9 digits
+		// Validate telegram recipient: must be between 3 and 13 digits
 		if req.Channel == "telegram" {
-			valid := len(req.Recipient) == 9
+			valid := len(req.Recipient) >= 3 && len(req.Recipient) <= 13
 			if valid {
-				for i := 0; i < 9; i++ {
+				for i := 0; i < len(req.Recipient); i++ {
 					ch := req.Recipient[i]
 					if ch < '0' || ch > '9' {
 						valid = false
@@ -52,8 +52,8 @@ func RegisterRoutes(ctx context.Context, r *ginext.Engine, store *redis.Storage)
 				}
 			}
 			if !valid {
-				log.Error().Msg("telegram recipient must be exactly 9 digits")
-				c.JSON(http.StatusBadRequest, gin.H{"error": "telegram recipient must be exactly 9 digits"})
+				log.Error().Msg("telegram recipient must be between 3 and 13 digits")
+				c.JSON(http.StatusBadRequest, gin.H{"error": "telegram recipient must be between 3 and 13 digits"})
 				return
 			}
 		}
