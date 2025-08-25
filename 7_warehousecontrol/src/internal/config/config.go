@@ -10,7 +10,13 @@ import (
 type Config struct {
 	Storage StorageConfig `yaml:"storage"`
 	Server  ServerConfig  `yaml:"server"`
-	Secret  string        `env:"SECRET" env-required:"true"`
+	JWT     JWTConfig     `yaml:"jwt"`
+}
+
+// JWTConfig is the configuration for the JWT.
+type JWTConfig struct {
+	Secret     string `yaml:"secret" env:"SECRET" env-required:"true"`
+	CookieName string `yaml:"cookie_name" env:"COOKIE_NAME" env-default:"auth"`
 }
 
 // StorageConfig is the configuration for the storage.

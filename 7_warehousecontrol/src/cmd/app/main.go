@@ -12,7 +12,7 @@ func main() {
 	cfg := config.MustLoad(os.Getenv("CONFIG_PATH"))
 	zlog.Init()
 
-	server := delivery.NewServer(cfg.Server.StaticDir)
+	server := delivery.NewServer(cfg)
 
 	server.Run(cfg.Server.Address)
 }
