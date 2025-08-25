@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salestracker - Sales Analytics Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-chart-line"></i> Salestracker</h1>
+                <p>Sales Analytics & Management Dashboard</p>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="tab-button active" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt"></i>
+                Dashboard
+            </button>
+            <button class="tab-button" data-tab="items">
+                <i class="fas fa-list"></i>
+                Items
+            </button>
+            <button class="tab-button" data-tab="add-item">
+                <i class="fas fa-plus"></i>
+                Add Item
+            </button>
+            <button class="tab-button" data-tab="analytics">
+                <i class="fas fa-chart-bar"></i>
+                Analytics
+            </button>
+        </nav>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+
+        <!-- Alert Messages -->
+        <div id="alert-container"></div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="total-revenue">$0</h3>
+                        <p>Total Revenue</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="total-items">0</h3>
+                        <p>Total Items</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="average-price">$0</h3>
+                        <p>Average Price</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="median-price">$0</h3>
+                        <p>Median Price</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="recent-items-section">
+                <h2>Recent Items</h2>
+                <div id="recent-items-list" class="recent-items-grid">
+                    <!-- Recent items will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Items Tab -->
+        <div id="items" class="tab-content">
+            <div class="items-header">
+                <h2>All Items</h2>
+                <div class="items-controls">
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Search items...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <select id="category-filter">
+                        <option value="">All Categories</option>
+                    </select>
+                    <button id="export-csv" class="btn btn-secondary">
+                        <i class="fas fa-download"></i>
+                        Export CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="items-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="title">Title <i class="fas fa-sort"></i></th>
+                            <th data-sort="price">Price <i class="fas fa-sort"></i></th>
+                            <th data-sort="category">Category <i class="fas fa-sort"></i></th>
+                            <th data-sort="date">Date <i class="fas fa-sort"></i></th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="items-tbody">
+                        <!-- Items will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="pagination">
+                <button id="prev-page" class="btn btn-secondary">
+                    <i class="fas fa-chevron-left"></i>
+                    Previous
+                </button>
+                <span id="page-info">Page 1 of 1</span>
+                <button id="next-page" class="btn btn-secondary">
+                    Next
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Item Tab -->
+        <div id="add-item" class="tab-content">
+            <div class="form-container">
+                <h2 id="form-title">Add New Item</h2>
+                <form id="item-form">
+                    <div class="form-group">
+                        <label for="title">Title *</label>
+                        <input type="text" id="title" name="title" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="price">Price *</label>
+                        <input type="number" id="price" name="price" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="category">Category *</label>
+                        <input type="text" id="category" name="category" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="date">Date *</label>
+                        <input type="datetime-local" id="date" name="date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description" rows="4"></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="submit-btn">
+                            <i class="fas fa-plus"></i>
+                            Add Item
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="cancel-btn" style="display: none;">
+                            <i class="fas fa-times"></i>
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content">
+            <div class="analytics-header">
+                <h2>Analytics Dashboard</h2>
+                <div class="date-range-selector">
+                    <input type="date" id="from-date" placeholder="From Date">
+                    <input type="date" id="to-date" placeholder="To Date">
+                    <button id="apply-filter" class="btn btn-primary">
+                        <i class="fas fa-filter"></i>
+                        Apply Filter
+                    </button>
+                    <button id="reset-filter" class="btn btn-secondary">
+                        <i class="fas fa-undo"></i>
+                        Reset
+                    </button>
+                </div>
+            </div>
+            
+            <div class="analytics-grid">
+                <div class="analytics-card">
+                    <h3>Total Sum</h3>
+                    <div class="metric-value" id="analytics-sum">$0</div>
+                </div>
+                <div class="analytics-card">
+                    <h3>Total Count</h3>
+                    <div class="metric-value" id="analytics-count">0</div>
+                </div>
+                <div class="analytics-card">
+                    <h3>Average</h3>
+                    <div class="metric-value" id="analytics-average">$0</div>
+                </div>
+                <div class="analytics-card">
+                    <h3>Median</h3>
+                    <div class="metric-value" id="analytics-median">$0</div>
+                </div>
+                <div class="analytics-card">
+                    <h3>90th Percentile</h3>
+                    <div class="metric-value" id="analytics-percentile">$0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div id="edit-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Item</h3>
+                    <button class="close-modal" id="close-edit-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="edit-form">
+                    <input type="hidden" id="edit-id">
+                    <div class="form-group">
+                        <label for="edit-title">Title *</label>
+                        <input type="text" id="edit-title" name="title" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-price">Price *</label>
+                        <input type="number" id="edit-price" name="price" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-category">Category *</label>
+                        <input type="text" id="edit-category" name="category" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-date">Date *</label>
+                        <input type="datetime-local" id="edit-date" name="date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-description">Description</label>
+                        <textarea id="edit-description" name="description" rows="4"></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Update Item
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="cancel-edit">
+                            <i class="fas fa-times"></i>
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="delete-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Confirm Delete</h3>
+                    <button class="close-modal" id="close-delete-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <p>Are you sure you want to delete this item? This action cannot be undone.</p>
+                <div class="form-actions">
+                    <button id="confirm-delete" class="btn btn-danger">
+                        <i class="fas fa-trash"></i>
+                        Delete
+                    </button>
+                    <button id="cancel-delete" class="btn btn-secondary">
+                        <i class="fas fa-times"></i>
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
