@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Repository is the interface for the repository.
 type Repository interface {
 	CreateItem(ctx context.Context, req models.PostRequest) (models.PostResponse, error)
 	ReadItems(ctx context.Context) ([]models.Item, error)
@@ -17,24 +18,29 @@ type Repository interface {
 	Analytics(ctx context.Context, from, to *time.Time) (models.Analytics, error)
 }
 
+// Tx is the interface for the transaction.
 type Tx interface {
 	Repository
 	Commit() error
 	Rollback() error
 }
 
+// TxManager is the interface for the transaction manager.
 type TxManager interface {
 	Do(ctx context.Context, fn func(ctx context.Context, tx Tx) error) error
 }
 
+// Usecase is the interface for the usecase.
 type Usecase struct {
 	mgr TxManager
 }
 
+// NewUsecase creates a new usecase.
 func NewUsecase(mgr TxManager) *Usecase {
 	return &Usecase{mgr: mgr}
 }
 
+// PostItem creates a new item.
 func (u *Usecase) PostItem(ctx context.Context, req models.PostRequest) (models.PostResponse, error) {
 	var resp models.PostResponse
 	if req.Date.IsZero() {
@@ -57,6 +63,7 @@ func (u *Usecase) PostItem(ctx context.Context, req models.PostRequest) (models.
 	return resp, nil
 }
 
+// GetItems gets all items.
 func (u *Usecase) GetItems(ctx context.Context) ([]models.Item, error) {
 	var items []models.Item
 	if err := u.mgr.Do(ctx, func(ctx context.Context, tx Tx) error {
@@ -78,6 +85,7 @@ func (u *Usecase) GetItems(ctx context.Context) ([]models.Item, error) {
 	return items, nil
 }
 
+// PutItem updates an item.
 func (u *Usecase) PutItem(ctx context.Context, id string, req models.PutRequest) (models.PutResponse, error) {
 	var resp models.PutResponse
 	if err := u.mgr.Do(ctx, func(ctx context.Context, tx Tx) error {
@@ -95,6 +103,7 @@ func (u *Usecase) PutItem(ctx context.Context, id string, req models.PutRequest)
 	return resp, nil
 }
 
+// DeleteItem deletes an item.
 func (u *Usecase) DeleteItem(ctx context.Context, id string) error {
 	if err := u.mgr.Do(ctx, func(ctx context.Context, tx Tx) error {
 		return tx.DeleteItem(ctx, id)
@@ -105,6 +114,7 @@ func (u *Usecase) DeleteItem(ctx context.Context, id string) error {
 	return nil
 }
 
+// GetAnalytics gets analytics.
 func (u *Usecase) GetAnalytics(ctx context.Context, from, to *time.Time) (models.Analytics, error) {
 	var analytics models.Analytics
 	if from == nil {

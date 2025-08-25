@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// PostRequest is the model for a post request.
 type PostRequest struct {
 	Title       string    `json:"title" validate:"required"`
 	Price       float64   `json:"price" validate:"required,min=0"`
@@ -10,4 +11,5 @@ type PostRequest struct {
 	Category    string    `json:"category" validate:"required"`
 }
 
+// PostResponse is the model for a post response.
 type PostResponse Item

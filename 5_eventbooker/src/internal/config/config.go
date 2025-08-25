@@ -1,8 +1,5 @@
 package config
 
-// im sorry, i cant do this anymore.
-// i cannot for fucks sake use your goddamn shit fucking ass fucking garbage piece of shit library.
-// imma have to use my own.
 import (
 	"fmt"
 	"os"

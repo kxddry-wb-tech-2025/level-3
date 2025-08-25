@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// Item is the model for an item.
 type Item struct {
 	ID          string    `json:"id"`
 	Title       string    `json:"title"`
@@ -13,6 +14,7 @@ type Item struct {
 	Category    string    `json:"category"`
 }
 
+// Analytics is the model for analytics.
 type Analytics struct {
 	Sum          float64 `json:"sum"`
 	Count        int64   `json:"count"`

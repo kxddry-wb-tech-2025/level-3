@@ -12,14 +12,17 @@ import (
 	"github.com/wb-go/wbf/zlog"
 )
 
+// Repository is the repository for the items.
 type Repository struct {
 	db *dbpg.DB
 }
 
+// New creates a new Repository instance.
 func New(db *dbpg.DB) *Repository {
 	return &Repository{db: db}
 }
 
+// CreateItem creates a new item.
 func (r *Repository) CreateItem(ctx context.Context, item models.PostRequest) (models.PostResponse, error) {
 	log := zlog.Logger.With().Str("component", "items").Logger().With().Str("operation", "CreateItem").Logger()
 	var id string
@@ -59,6 +62,7 @@ func (r *Repository) CreateItem(ctx context.Context, item models.PostRequest) (m
 	return resp, nil
 }
 
+// ReadItems reads all items.
 func (r *Repository) ReadItems(ctx context.Context) ([]models.Item, error) {
 	log := zlog.Logger.With().Str("component", "items").Logger().With().Str("operation", "ReadItems").Logger()
 	query := `
@@ -95,10 +99,11 @@ func (r *Repository) ReadItems(ctx context.Context) ([]models.Item, error) {
 	return items, nil
 }
 
+// UpdateItem updates an item.
 func (r *Repository) UpdateItem(ctx context.Context, id string, req models.PutRequest) (models.PutResponse, error) {
 	log := zlog.Logger.With().Str("component", "items").Logger().With().Str("operation", "UpdateItem").Logger()
 	query := `
-	UPDATE items SET title = $1, price = $2, description = $3, item_date = $4, category = $5 WHERE id = $6
+	UPDATE items SET title = $1, price = $2, description = $3, item_date = $4, category = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6
 	`
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		_, err := tx.ExecContext(ctx, query, req.Title, req.Price, req.Description, req.Date, req.Category, id)
@@ -131,6 +136,7 @@ func (r *Repository) UpdateItem(ctx context.Context, id string, req models.PutRe
 	}, nil
 }
 
+// DeleteItem deletes an item.
 func (r *Repository) DeleteItem(ctx context.Context, id string) error {
 	log := zlog.Logger.With().Str("component", "items").Logger().With().Str("operation", "DeleteItem").Logger()
 	query := `
@@ -154,6 +160,7 @@ func (r *Repository) DeleteItem(ctx context.Context, id string) error {
 	return nil
 }
 
+// Analytics returns analytics for the items.
 func (r *Repository) Analytics(ctx context.Context, from, to *time.Time) (models.Analytics, error) {
 	log := zlog.Logger.With().Str("component", "items").Logger().With().Str("operation", "Analytics").Logger()
 	query := `
