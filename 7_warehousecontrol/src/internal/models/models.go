@@ -25,3 +25,8 @@ var (
 	RoleUser    = "user"
 	RoleManager = "manager" // can only manage items
 )
+
+type User struct {
+	ID   string `json:"id"`
+	Role string `json:"role"`
+}

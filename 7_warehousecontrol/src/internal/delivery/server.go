@@ -20,22 +20,28 @@ type Service interface {
 	DeleteItem(ctx context.Context, id string) error
 }
 
-type Server struct {
-	log    zerolog.Logger
-	r      *ginext.Engine
-	svc    Service
-	v      *validator.Validate
-	secret string
+type AuthService interface {
+	VerifyJWT(ctx context.Context, tokenString string) (string, error)
+	CreateJWT(ctx context.Context, role string) (string, error)
 }
 
-func NewServer(cfg *config.Config) *Server {
+type Server struct {
+	log     zerolog.Logger
+	r       *ginext.Engine
+	svc     Service
+	authSvc AuthService
+	v       *validator.Validate
+}
+
+func NewServer(cfg *config.Config, svc Service, authSvc AuthService) *Server {
 	r := ginext.New()
 	log := zlog.Logger.With().Str("service", "server").Logger()
 	s := &Server{
-		log:    log,
-		r:      r,
-		v:      validator.New(),
-		secret: cfg.JWT.Secret,
+		log:     log,
+		r:       r,
+		svc:     svc,
+		authSvc: authSvc,
+		v:       validator.New(),
 	}
 	s.registerRoutes(cfg)
 
@@ -63,7 +69,7 @@ func (s *Server) registerRoutes(cfg *config.Config) {
 	meta.GET("/health", func(c *ginext.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
-	meta.GET("/jwt", s.getJWT())
+	meta.POST("/jwt/:role", s.createJWT())
 }
 
 func (s *Server) Run(address ...string) error {

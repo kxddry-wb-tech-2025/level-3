@@ -3,11 +3,9 @@ package delivery
 import (
 	"errors"
 	"net/http"
-	"time"
 	"warehousecontrol/src/internal/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/kxddry/wbf/ginext"
 )
@@ -104,7 +102,7 @@ func (s *Server) deleteItem() gin.HandlerFunc {
 	}
 }
 
-func (s *Server) getJWT() gin.HandlerFunc {
+func (s *Server) createJWT() gin.HandlerFunc {
 	log := s.log.With().Str("handler", "getJWT").Logger()
 	return func(c *ginext.Context) {
 		role := c.Param("role")
@@ -116,19 +114,10 @@ func (s *Server) getJWT() gin.HandlerFunc {
 			role = models.RoleUser
 		}
 
-		claims := jwt.MapClaims{
-			"role": role,
-			"exp":  time.Now().Add(time.Hour * 1).Unix(), // expires in 1h
-			"iat":  time.Now().Unix(),
-			"iss":  "warehousecontrol",
-		}
-
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-		signed, err := token.SignedString([]byte(s.secret))
+		signed, err := s.authSvc.CreateJWT(c.Request.Context(), role)
 		if err != nil {
-			log.Error().Err(err).Msg("failed to sign JWT")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate jwt"})
+			log.Error().Err(err).Msg("failed to create JWT")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
