@@ -52,6 +52,8 @@ func (s *Server) registerRoutes(cfg *config.Config) {
 	api := s.r.Group("/api/v1")
 
 	items := api.Group("/items")
+	items.Use(s.VerifyJWT)
+
 	items.POST("", s.postItem())
 	items.GET("", s.getItems())
 	items.PUT("/:id", s.putItem())

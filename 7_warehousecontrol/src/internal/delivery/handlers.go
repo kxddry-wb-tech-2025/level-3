@@ -59,6 +59,12 @@ func (s *Server) putItem() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		var req models.PutItemRequest
 
+		if err := c.ShouldBindJSON(&req); err != nil {
+			log.Error().Err(err).Msg("failed to bind request")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		if err := s.v.Struct(req); err != nil {
 			log.Error().Err(err).Msg("failed to validate request")
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
