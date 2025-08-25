@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Usecase is an interface that defines the methods for the event booker usecase.
 type Usecase interface {
 	CreateEvent(ctx context.Context, event domain.CreateEventRequest) domain.CreateEventResponse
 	GetEvent(ctx context.Context, eventID string) domain.EventDetailsResponse
@@ -21,6 +22,7 @@ type Usecase interface {
 	Confirm(ctx context.Context, eventID, bookingID string) domain.ConfirmResponse
 }
 
+// Server is a struct that contains the logger, router, usecase, and validator.
 type Server struct {
 	log zerolog.Logger
 	r   *ginext.Engine
@@ -28,6 +30,7 @@ type Server struct {
 	v   *validator.Validate
 }
 
+// NewServer creates a new server.
 func NewServer(uc Usecase, staticDir string) *Server {
 	r := ginext.New()
 
@@ -44,6 +47,7 @@ func NewServer(uc Usecase, staticDir string) *Server {
 	return s
 }
 
+// Run runs the server.
 func (s *Server) Run(addrs ...string) error {
 	if len(addrs) == 0 {
 		addrs = []string{":8080"}
@@ -52,6 +56,7 @@ func (s *Server) Run(addrs ...string) error {
 	return s.r.Run(addrs...)
 }
 
+// registerRoutes registers the routes for the server.
 func (s *Server) registerRoutes() {
 	r := s.r.Group("/api")
 	// health check

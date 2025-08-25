@@ -10,10 +10,12 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+// Consumer is a Kafka consumer that reads messages from a Kafka topic and converts them to domain events.
 type Consumer struct {
 	r *kafka.Reader
 }
 
+// NewConsumer creates a new Kafka consumer.
 func NewConsumer(ctx context.Context, brokers []string, topic string, groupID string) (*Consumer, error) {
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  brokers,
@@ -32,10 +34,12 @@ func NewConsumer(ctx context.Context, brokers []string, topic string, groupID st
 	return &Consumer{r: r}, nil
 }
 
+// Close closes the Kafka consumer.
 func (c *Consumer) Close() error {
 	return c.r.Close()
 }
 
+// Messages reads messages from the Kafka topic and converts them to domain events.
 func (c *Consumer) Messages(ctx context.Context) <-chan domain.CancelBookingEvent {
 	out := make(chan domain.CancelBookingEvent)
 	go func() {
@@ -70,6 +74,7 @@ func (c *Consumer) Messages(ctx context.Context) <-chan domain.CancelBookingEven
 	return out
 }
 
+// msgToEvent converts a NotificationEvent to a CancelBookingEvent.
 func (c *Consumer) msgToEvent(msg NotificationEvent) (domain.CancelBookingEvent, error) {
 	var event domain.CancelBookingEvent
 
@@ -85,6 +90,7 @@ func (c *Consumer) msgToEvent(msg NotificationEvent) (domain.CancelBookingEvent,
 	return event, nil
 }
 
+// messageToID converts a NotificationEvent to a CancelBookingEvent.
 func messageToID(msg NotificationEvent) (ids, error) {
 	var bookingID, eventID string
 

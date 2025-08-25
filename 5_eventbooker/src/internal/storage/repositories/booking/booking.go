@@ -11,25 +11,29 @@ import (
 	"github.com/kxddry/wbf/dbpg"
 )
 
-type BookingRepository struct {
+// Repository is a repository for the booking domain.
+type Repository struct {
 	db *dbpg.DB
 }
 
-func New(masterDSN string, slaveDSNs ...string) (*BookingRepository, error) {
+// New creates a new Repository.
+func New(masterDSN string, slaveDSNs ...string) (*Repository, error) {
 	db, err := dbpg.New(masterDSN, slaveDSNs, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &BookingRepository{db: db}, nil
+	return &Repository{db: db}, nil
 }
 
-func (r *BookingRepository) Close() error {
+// Close closes the Repository.
+func (r *Repository) Close() error {
 	for _, slave := range r.db.Slaves {
 		_ = slave.Close()
 	}
 	return r.db.Master.Close()
 }
 
+// Book books a ticket for an event.
 /*
 
 CREATE TABLE bookings (
@@ -43,7 +47,8 @@ CREATE TABLE bookings (
 )
 */
 
-func (r *BookingRepository) Book(ctx context.Context, eventID, userID string, paymentDeadline time.Time, decremented bool) (string, error) {
+// Book books a ticket for an event.
+func (r *Repository) Book(ctx context.Context, eventID, userID string, paymentDeadline time.Time, decremented bool) (string, error) {
 	var id string
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		err := tx.QueryRowContext(ctx, `INSERT INTO bookings (event_id, user_id, payment_deadline, decremented, status) VALUES ($1, $2, $3, $4, $5) RETURNING id`, eventID, userID, paymentDeadline, decremented, domain.BookingStatusPending).Scan(&id)
@@ -65,7 +70,8 @@ func (r *BookingRepository) Book(ctx context.Context, eventID, userID string, pa
 	return id, nil
 }
 
-func (r *BookingRepository) BookingSetDecremented(ctx context.Context, bookingID string, decremented bool) error {
+// BookingSetDecremented sets the decremented flag for a booking.
+func (r *Repository) BookingSetDecremented(ctx context.Context, bookingID string, decremented bool) error {
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		res, err := tx.ExecContext(ctx, `UPDATE bookings SET decremented = $1 WHERE id = $2`, decremented, bookingID)
 		if err != nil {
@@ -94,7 +100,8 @@ func (r *BookingRepository) BookingSetDecremented(ctx context.Context, bookingID
 	return nil
 }
 
-func (r *BookingRepository) BookingSetStatus(ctx context.Context, bookingID string, status string) error {
+// BookingSetStatus sets the status for a booking.
+func (r *Repository) BookingSetStatus(ctx context.Context, bookingID string, status string) error {
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		res, err := tx.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, status, bookingID)
 		if err != nil {
@@ -124,7 +131,8 @@ func (r *BookingRepository) BookingSetStatus(ctx context.Context, bookingID stri
 	return nil
 }
 
-func (r *BookingRepository) GetBooking(ctx context.Context, bookingID string) (domain.Booking, error) {
+// GetBooking gets a booking by its ID.
+func (r *Repository) GetBooking(ctx context.Context, bookingID string) (domain.Booking, error) {
 	var b domain.Booking
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		err := tx.QueryRowContext(ctx, `SELECT event_id, user_id, payment_deadline, status, decremented FROM bookings WHERE id = $1`, bookingID).Scan(&b.EventID, &b.UserID, &b.PaymentDeadline, &b.Status, &b.Decremented)
@@ -148,7 +156,8 @@ func (r *BookingRepository) GetBooking(ctx context.Context, bookingID string) (d
 	return b, nil
 }
 
-func (r *BookingRepository) Confirm(ctx context.Context, bookingID string) (string, error) {
+// Confirm confirms a booking and returns the status.
+func (r *Repository) Confirm(ctx context.Context, bookingID string) (string, error) {
 	var status string
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		res, err := tx.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, domain.BookingStatusConfirmed, bookingID)

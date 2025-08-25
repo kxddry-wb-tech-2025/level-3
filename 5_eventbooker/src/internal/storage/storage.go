@@ -7,8 +7,11 @@ import (
 )
 
 var (
-	ErrNotFound        = errors.New("not found")
-	ErrEventNotFound   = errors.New("event not found")
+	// ErrNotFound is returned when a resource is not found.
+	ErrNotFound = errors.New("not found")
+	// ErrEventNotFound is returned when an event is not found.
+	ErrEventNotFound = errors.New("event not found")
+	// ErrBookingNotFound is returned when a booking is not found.
 	ErrBookingNotFound = errors.New("booking not found")
 )
 
