@@ -32,3 +32,9 @@ type User struct {
 	ID   string `json:"id"`
 	Role Role   `json:"role"`
 }
+
+const (
+	ActionCreate = "create"
+	ActionDelete = "delete"
+	ActionUpdate = "update"
+)

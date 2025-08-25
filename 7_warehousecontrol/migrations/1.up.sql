@@ -32,16 +32,17 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         INSERT INTO items_history (action, item_id, user_id)
-        VALUES ('INSERT', NEW.id, NEW.deleted_by);
+        VALUES ('INSERT', NEW.id, NULL);
         RETURN NEW;
     ELSIF TG_OP = 'UPDATE' THEN
-        INSERT INTO items_history (action, item_id, user_id)
-        VALUES ('UPDATE', NEW.id, NEW.deleted_by);
+        IF NEW.deleted_at IS NOT NULL AND OLD.deleted_at IS NULL THEN
+            INSERT INTO items_history (action, item_id, user_id)
+            VALUES ('DELETE', NEW.id, NEW.deleted_by);
+        ELSE
+            INSERT INTO items_history (action, item_id, user_id)
+            VALUES ('UPDATE', NEW.id, NULL);
+        END IF;
         RETURN NEW;
-    ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO items_history (action, item_id, user_id)
-        VALUES ('DELETE', OLD.id, OLD.deleted_by);
-        RETURN OLD;
     END IF;
     RETURN NULL;
 END;
@@ -50,5 +51,6 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS items_changes_trigger ON items;
 
 CREATE TRIGGER items_changes_trigger
-AFTER INSERT OR UPDATE OR DELETE ON items
+AFTER INSERT OR UPDATE ON items
 FOR EACH ROW EXECUTE FUNCTION log_items_changes();
+
