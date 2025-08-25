@@ -3,6 +3,7 @@ package delivery
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"warehousecontrol/src/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,29 @@ func (s *Server) postItem() gin.HandlerFunc {
 	log := s.log.With().Str("handler", "postItem").Logger()
 	return func(c *ginext.Context) {
 		var req models.PostItemRequest
+
+		userID, ok := c.Get("id")
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+			return
+		}
+		uid, ok := userID.(string)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+			return
+		}
+
+		role, ok := c.Get("role")
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
+			return
+		}
+
+		roleEnum, ok := role.(models.Role)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
+			return
+		}
 
 		if err := c.ShouldBindJSON(&req); err != nil {
 			log.Error().Err(err).Msg("failed to bind request")
@@ -27,7 +51,7 @@ func (s *Server) postItem() gin.HandlerFunc {
 			return
 		}
 
-		item, err := s.svc.CreateItem(c.Request.Context(), req)
+		item, err := s.svc.CreateItem(c.Request.Context(), req, roleEnum, uid)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to create item")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -57,6 +81,30 @@ func (s *Server) putItem() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		var req models.PutItemRequest
 
+		userID, ok := c.Get("id")
+
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+			return
+		}
+		uid, ok := userID.(string)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+			return
+		}
+
+		role, ok := c.Get("role")
+
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
+			return
+		}
+		roleEnum, ok := role.(models.Role)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
+			return
+		}
+
 		if err := c.ShouldBindJSON(&req); err != nil {
 			log.Error().Err(err).Msg("failed to bind request")
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -69,7 +117,7 @@ func (s *Server) putItem() gin.HandlerFunc {
 			return
 		}
 
-		item, err := s.svc.UpdateItem(c.Request.Context(), req)
+		item, err := s.svc.UpdateItem(c.Request.Context(), req, roleEnum, uid)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to update item")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -84,11 +132,31 @@ func (s *Server) deleteItem() gin.HandlerFunc {
 	log := s.log.With().Str("handler", "deleteItem").Logger()
 	return func(c *ginext.Context) {
 		id := c.Param("id")
+		userID, ok := c.Get("id")
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+			return
+		}
+		uid := userID.(string)
+
 		if _, err := uuid.Parse(id); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: must be uuid"})
 			return
 		}
-		if err := s.svc.DeleteItem(c.Request.Context(), id); err != nil {
+
+		role, ok := c.Get("role")
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
+			return
+		}
+
+		roleEnum, ok := role.(models.Role)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
+			return
+		}
+
+		if err := s.svc.DeleteItem(c.Request.Context(), id, uid, roleEnum); err != nil {
 			if errors.Is(err, models.ErrItemNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 				return
@@ -106,15 +174,13 @@ func (s *Server) createJWT() gin.HandlerFunc {
 	log := s.log.With().Str("handler", "getJWT").Logger()
 	return func(c *ginext.Context) {
 		role := c.Param("role")
-		if role != "" && role != models.RoleAdmin && role != models.RoleUser && role != models.RoleManager {
+		roleInt, err := strconv.Atoi(role)
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
 			return
 		}
-		if role == "" {
-			role = models.RoleUser
-		}
 
-		signed, err := s.authSvc.CreateJWT(c.Request.Context(), role)
+		signed, err := s.authSvc.CreateJWT(c.Request.Context(), models.Role(roleInt))
 		if err != nil {
 			log.Error().Err(err).Msg("failed to create JWT")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

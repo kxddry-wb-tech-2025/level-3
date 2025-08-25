@@ -14,15 +14,15 @@ import (
 )
 
 type Service interface {
-	CreateItem(ctx context.Context, req models.PostItemRequest) (models.Item, error)
+	CreateItem(ctx context.Context, req models.PostItemRequest, role models.Role, userID string) (models.Item, error)
 	GetItems(ctx context.Context) ([]models.Item, error)
-	UpdateItem(ctx context.Context, req models.PutItemRequest) (models.Item, error)
-	DeleteItem(ctx context.Context, id string) error
+	UpdateItem(ctx context.Context, req models.PutItemRequest, role models.Role, userID string) (models.Item, error)
+	DeleteItem(ctx context.Context, id string, userID string, role models.Role) error
 }
 
 type AuthService interface {
-	VerifyJWT(ctx context.Context, tokenString string) (string, error)
-	CreateJWT(ctx context.Context, role string) (string, error)
+	VerifyJWT(ctx context.Context, tokenString string) (role models.Role, userID string, err error)
+	CreateJWT(ctx context.Context, role models.Role) (string, error)
 }
 
 type Server struct {
