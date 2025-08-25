@@ -9,7 +9,4 @@ type PostRequest struct {
 	Date        time.Time `json:"date" validate:"required"`
 }
 
-type PostResponse struct {
-	ID    string `json:"id"`
-	Error string `json:"error,omitempty"`
-}
+type PostResponse Item
