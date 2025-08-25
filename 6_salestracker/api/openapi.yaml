@@ -1,0 +1,259 @@
+openapi: 3.1.0
+info:
+  title: Salestracker API
+  version: 1.0.0
+  description: API for managing sales
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local server
+
+paths:
+  /items:
+    post:
+      summary: Create a new item (date must be in the past)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+      responses:
+        '200':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '400':
+          description: Bad request (invalid formatting, date in the future)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error (database error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: Get all items (sorted by date)
+      responses:
+        '200':
+          description: Items retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+        '500':
+          description: Internal server error (database error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found (When there are no items)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /items/{id}:
+    put:
+      summary: Update an item (date must be in the past)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutRequest'
+      responses:
+        '200':
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutResponse'
+        '400':
+          description: Bad request (invalid formatting, date in the future)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error (database error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete an item (date must be in the past)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Item deleted successfully
+        '400':
+          description: Bad request (invalid formatting, date in the future)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error (database error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analytics:
+    get:
+      summary: Get analytics
+      responses:
+        '200':
+          description: Analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analytics'
+        '500':
+          description: Internal server error (database error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found (When there are no items)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    PostRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        price:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        category:
+          type: string
+    PostResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        price:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        category:
+          type: string
+
+    PutRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        price:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        category:
+          type: string
+    PutResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        price:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        category:
+          type: string
+
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        price:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        category:
+          type: string
+
+    Analytics:
+      type: object
+      properties:
+        sum:
+          type: number
+        count:
+          type: number
+        average:
+          type: number
+        median:
+          type: number
+        percentile_90:
+          type: number

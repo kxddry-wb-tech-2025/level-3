@@ -42,7 +42,7 @@ func New(svc Service) *Server {
 }
 
 func (s *Server) registerRoutes() {
-	r := s.r.Group("/api")
+	r := s.r.Group("/api/v1")
 
 	r.POST("/items", func(c *ginext.Context) {
 		var req models.PostRequest
