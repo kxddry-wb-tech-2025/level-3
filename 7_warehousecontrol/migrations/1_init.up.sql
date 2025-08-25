@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS items (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMPTZ,
-    deleted_by UUID REFERENCES users(id),
+    deleted_by UUID REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS items_history (

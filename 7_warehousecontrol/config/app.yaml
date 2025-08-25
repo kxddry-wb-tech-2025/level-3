@@ -1,0 +1,8 @@
+storage:
+  master_dsn: "postgres://user:$POSTGRES_PASSWORD@localhost:5432/warehouse?sslmode=disable"
+  slave_dsns:
+    - "postgres://user:$POSTGRES_PASSWORD@localhost:5432/warehouse?sslmode=disable"
+
+server:
+  address: ":8080"
+  static_dir: "./frontend"

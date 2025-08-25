@@ -11,10 +11,12 @@ import (
 	historyuc "warehousecontrol/src/internal/service/history"
 	itemuc "warehousecontrol/src/internal/service/items"
 
+	"github.com/joho/godotenv"
 	"github.com/kxddry/wbf/zlog"
 )
 
 func main() {
+	godotenv.Load()
 	cfg := config.MustLoad(os.Getenv("CONFIG_PATH"))
 	zlog.Init()
 	_ = cfg

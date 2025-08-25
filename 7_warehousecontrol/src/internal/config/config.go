@@ -15,8 +15,7 @@ type Config struct {
 
 // JWTConfig is the configuration for the JWT.
 type JWTConfig struct {
-	Secret     string `yaml:"secret" env:"SECRET" env-required:"true"`
-	CookieName string `yaml:"cookie_name" env:"COOKIE_NAME" env-default:"auth"`
+	Secret string `yaml:"secret" env:"JWT_SECRET" env-required:"true"`
 }
 
 // StorageConfig is the configuration for the storage.
