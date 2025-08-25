@@ -1,0 +1,437 @@
+openapi: 3.0.3
+info:
+  title: Warehouse Control API
+  description: API for managing warehouse items and tracking history
+  version: 1.0.0
+  contact:
+    name: Warehouse Control Team
+servers:
+  - url: /api/v1
+    description: API v1 base URL
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication
+
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the item
+        name:
+          type: string
+          maxLength: 255
+          description: Name of the item
+        description:
+          type: string
+          maxLength: 1000
+          description: Description of the item
+        quantity:
+          type: integer
+          minimum: 0
+          description: Quantity of the item in stock
+        price:
+          type: number
+          format: double
+          minimum: 0
+          description: Price of the item
+      required:
+        - id
+        - name
+        - description
+        - quantity
+        - price
+
+    PostItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Name of the item
+        description:
+          type: string
+          maxLength: 1000
+          description: Description of the item
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity of the item in stock
+        price:
+          type: number
+          format: double
+          minimum: 0
+          description: Price of the item
+      required:
+        - name
+        - quantity
+        - price
+
+    PutItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Name of the item
+        description:
+          type: string
+          maxLength: 1000
+          description: Description of the item
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity of the item in stock
+        price:
+          type: number
+          format: double
+          minimum: 0
+          description: Price of the item
+      required:
+        - id
+        - name
+        - description
+        - quantity
+        - price
+
+    HistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the history entry
+        action:
+          type: string
+          enum: [create, update, delete]
+          description: Action performed on the item
+        item_id:
+          type: string
+          format: uuid
+          description: ID of the item that was modified
+        user_id:
+          type: string
+          format: uuid
+          description: ID of the user who performed the action
+        role:
+          type: integer
+          enum: [2, 3]
+          description: Role of the user who performed the action
+        changed_at:
+          type: string
+          format: date-time
+          description: Timestamp when the action was performed
+      required:
+        - id
+        - action
+        - item_id
+        - user_id
+        - changed_at
+
+    JWTResponse:
+      type: object
+      properties:
+        jwt:
+          type: string
+          description: JWT token for authentication
+      required:
+        - jwt
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+        - error
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          description: Health status
+      required:
+        - status
+
+    Role:
+      type: integer
+      enum: [1, 2, 3]
+      description: |
+        1 - User
+        2 - Manager  
+        3 - Admin
+
+paths:
+  /items:
+    post:
+      summary: Create a new item
+      description: Create a new item in the warehouse
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostItemRequest'
+      responses:
+        '201':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Get all items
+      description: Retrieve all items from the warehouse
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of items retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+        '401':
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /items/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Item ID
+
+    put:
+      summary: Update an item
+      description: Update an existing item in the warehouse
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutItemRequest'
+      responses:
+        '200':
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete an item
+      description: Delete an item from the warehouse
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Item deleted successfully
+        '401':
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /meta/health:
+    get:
+      summary: Health check
+      description: Check if the service is healthy
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /meta/jwt/{role}:
+    parameters:
+      - name: role
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Role'
+        description: Role for which to generate JWT token
+
+    post:
+      summary: Generate JWT token
+      description: Generate a JWT token for the specified role
+      responses:
+        '200':
+          description: JWT token generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JWTResponse'
+        '400':
+          description: Bad request - invalid role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /meta/history:
+    get:
+      summary: Get history
+      description: Retrieve history of item operations with optional filtering
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter history from this date (RFC3339 format)
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter history to this date (RFC3339 format)
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by user ID
+        - name: item_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by item ID
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [create, update, delete]
+          description: Filter by action type
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/Role'
+          description: Filter by user role
+      responses:
+        '200':
+          description: History retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoryEntry'
+        '400':
+          description: Bad request - invalid date format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: No history found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+tags:
+  - name: Items
+    description: Operations for managing warehouse items
+  - name: Authentication
+    description: JWT token generation
+  - name: History
+    description: History tracking operations
+  - name: Health
+    description: Service health monitoring

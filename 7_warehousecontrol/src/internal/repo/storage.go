@@ -20,4 +20,6 @@ type HistoryArgs struct {
 	FilterDateFrom   time.Time
 	FilterDateTo     time.Time
 	FilterByUserRole models.Role
+	Limit            int64
+	Offset           int64
 }

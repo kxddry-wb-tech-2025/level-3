@@ -28,7 +28,7 @@ type AuthService interface {
 }
 
 type HistoryService interface {
-	GetHistory(ctx context.Context, filterByUserID string, filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time, filterByUserRole string) ([]repo.HistoryEntry, error)
+	GetHistory(ctx context.Context, filterByUserID string, filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time, filterByUserRole string, limit, offset int64) ([]repo.HistoryEntry, error)
 }
 
 type Server struct {
@@ -78,7 +78,9 @@ func (s *Server) registerRoutes(cfg *config.Config) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 	meta.POST("/jwt/:role", s.createJWT())
-	meta.GET("/history", s.getHistory())
+	history := meta.Group("/history")
+	history.Use(s.VerifyJWT)
+	history.GET("", s.getHistory())
 }
 
 func (s *Server) Run(address ...string) error {

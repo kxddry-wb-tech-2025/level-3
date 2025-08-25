@@ -64,6 +64,16 @@ func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]
 			query += " AND user_id IN (SELECT id FROM users WHERE role = $1)"
 			queryArgs = append(queryArgs, args.FilterByUserRole)
 		}
+
+		if args.Limit > 0 {
+			query += " LIMIT $1"
+			queryArgs = append(queryArgs, args.Limit)
+		}
+
+		if args.Offset > 0 {
+			query += " OFFSET $1"
+			queryArgs = append(queryArgs, args.Offset)
+		}
 	}
 
 	query += " ORDER BY changed_at DESC"

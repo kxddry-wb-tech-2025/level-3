@@ -22,7 +22,7 @@ func NewUsecase(repo Repository) *Usecase {
 	return &Usecase{repo: repo}
 }
 
-func (u *Usecase) GetHistory(ctx context.Context, filterByUserID string, filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time, filterByUserRole string) ([]repo.HistoryEntry, error) {
+func (u *Usecase) GetHistory(ctx context.Context, filterByUserID string, filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time, filterByUserRole string, limit, offset int64) ([]repo.HistoryEntry, error) {
 	if filterByUserID != "" && uuid.Validate(filterByUserID) != nil {
 		return nil, fmt.Errorf("invalid user id")
 	}
@@ -63,6 +63,8 @@ func (u *Usecase) GetHistory(ctx context.Context, filterByUserID string, filterB
 		FilterDateFrom:   filterDateFrom,
 		FilterDateTo:     filterDateTo,
 		FilterByUserRole: filterByUserRoleInt,
+		Limit:            limit,
+		Offset:           offset,
 	}
 
 	return u.repo.GetHistory(ctx, args)

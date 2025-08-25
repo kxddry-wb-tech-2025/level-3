@@ -13,7 +13,7 @@ type Item struct {
 type PostItemRequest struct {
 	Name        string  `json:"name" validate:"required,min=1,max=255"`
 	Description string  `json:"description" validate:"min=0,max=1000"`
-	Quantity    int     `json:"quantity" validate:"required,min=1"`
+	Quantity    int     `json:"quantity" validate:"required,min=0"`
 	Price       float64 `json:"price" validate:"required,min=0"`
 }
 

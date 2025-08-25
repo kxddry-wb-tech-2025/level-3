@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS items_history (
     action TEXT NOT NULL,
     item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id),
+    role INTEGER NOT NULL,
     changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -31,16 +32,16 @@ CREATE OR REPLACE FUNCTION log_items_changes()
 RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        INSERT INTO items_history (action, item_id, user_id)
-        VALUES ('INSERT', NEW.id, NULL);
+        INSERT INTO items_history (action, item_id, user_id, role)
+        VALUES ('INSERT', NEW.id, NULL, NEW.role);
         RETURN NEW;
     ELSIF TG_OP = 'UPDATE' THEN
         IF NEW.deleted_at IS NOT NULL AND OLD.deleted_at IS NULL THEN
-            INSERT INTO items_history (action, item_id, user_id)
-            VALUES ('DELETE', NEW.id, NEW.deleted_by);
+            INSERT INTO items_history (action, item_id, user_id, role)
+            VALUES ('DELETE', NEW.id, NEW.deleted_by, NEW.role);
         ELSE
-            INSERT INTO items_history (action, item_id, user_id)
-            VALUES ('UPDATE', NEW.id, NULL);
+            INSERT INTO items_history (action, item_id, user_id, role)
+            VALUES ('UPDATE', NEW.id, NULL, NEW.role);
         END IF;
         RETURN NEW;
     END IF;

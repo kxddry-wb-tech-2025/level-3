@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"warehousecontrol/src/internal/models"
+	"warehousecontrol/src/internal/repo"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -68,6 +69,10 @@ func (s *Server) getItems() gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		items, err := s.svc.GetItems(c.Request.Context())
 		if err != nil {
+			if errors.Is(err, models.ErrItemNotFound) {
+				c.JSON(http.StatusOK, gin.H{"items": []models.Item{}})
+				return
+			}
 			log.Error().Err(err).Msg("failed to get items")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -195,15 +200,28 @@ func (s *Server) createJWT() gin.HandlerFunc {
 func (s *Server) getHistory() gin.HandlerFunc {
 	log := s.log.With().Str("handler", "getHistory").Logger()
 	return func(c *ginext.Context) {
-
 		dateFromStr := c.Query("date_from")
 		dateToStr := c.Query("date_to")
 		userID := c.Query("user_id")
 		itemID := c.Query("item_id")
 		action := c.Query("action")
 		role := c.Query("role")
-		var dateFrom, dateTo time.Time
+		limitStr := c.Query("limit")
+		offsetStr := c.Query("offset")
+		var limit, offset int64
 		var err error
+
+		limit, err = strconv.ParseInt(limitStr, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit"})
+			return
+		}
+		offset, err = strconv.ParseInt(offsetStr, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid offset"})
+			return
+		}
+		var dateFrom, dateTo time.Time
 		if dateFromStr != "" {
 			dateFrom, err = time.Parse(time.RFC3339, dateFromStr)
 			if err != nil {
@@ -218,10 +236,10 @@ func (s *Server) getHistory() gin.HandlerFunc {
 				return
 			}
 		}
-		history, err := s.historySvc.GetHistory(c.Request.Context(), userID, itemID, action, dateFrom, dateTo, role)
+		history, err := s.historySvc.GetHistory(c.Request.Context(), userID, itemID, action, dateFrom, dateTo, role, limit, offset)
 		if err != nil {
 			if errors.Is(err, models.ErrItemNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				c.JSON(http.StatusOK, gin.H{"history": []repo.HistoryEntry{}})
 				return
 			}
 			log.Error().Err(err).Msg("failed to get history")
