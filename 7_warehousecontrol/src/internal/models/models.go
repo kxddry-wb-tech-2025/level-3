@@ -26,3 +26,9 @@ type PutItemRequest Item
 type User struct {
 	Role string `json:"role"`
 }
+
+var (
+	RoleAdmin   = "admin"
+	RoleUser    = "user"
+	RoleManager = "manager" // can only manage items
+)

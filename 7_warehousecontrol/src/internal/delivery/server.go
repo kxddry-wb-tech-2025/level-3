@@ -6,6 +6,7 @@ import (
 	"warehousecontrol/src/internal/config"
 	"warehousecontrol/src/internal/models"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/kxddry/wbf/ginext"
 	"github.com/kxddry/wbf/zlog"
@@ -20,19 +21,21 @@ type Service interface {
 }
 
 type Server struct {
-	log zerolog.Logger
-	r   *ginext.Engine
-	svc Service
-	v   *validator.Validate
+	log    zerolog.Logger
+	r      *ginext.Engine
+	svc    Service
+	v      *validator.Validate
+	secret string
 }
 
 func NewServer(cfg *config.Config) *Server {
 	r := ginext.New()
 	log := zlog.Logger.With().Str("service", "server").Logger()
 	s := &Server{
-		log: log,
-		r:   r,
-		v:   validator.New(),
+		log:    log,
+		r:      r,
+		v:      validator.New(),
+		secret: cfg.JWT.Secret,
 	}
 	s.registerRoutes(cfg)
 
@@ -48,10 +51,17 @@ func (s *Server) registerRoutes(cfg *config.Config) {
 
 	api := s.r.Group("/api/v1")
 
-	api.POST("/items", s.postItem())
-	api.GET("/items", s.getItems())
-	api.PUT("/items/:id", s.putItem())
-	api.DELETE("/items/:id", s.deleteItem())
+	items := api.Group("/items")
+	items.POST("", s.postItem())
+	items.GET("", s.getItems())
+	items.PUT("/:id", s.putItem())
+	items.DELETE("/:id", s.deleteItem())
+
+	meta := api.Group("/meta")
+	meta.GET("/health", func(c *ginext.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+	meta.GET("/jwt", s.getJWT())
 }
 
 func (s *Server) Run(address ...string) error {
