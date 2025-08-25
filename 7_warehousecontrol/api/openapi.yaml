@@ -96,7 +96,6 @@ components:
           minimum: 0
           description: Price of the item
       required:
-        - id
         - name
         - description
         - quantity
@@ -398,9 +397,22 @@ paths:
           schema:
             $ref: '#/components/schemas/Role'
           description: Filter by user role
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          description: Number of history entries to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+          description: Number of history entries to skip
       responses:
         '200':
-          description: History retrieved successfully
+          description: History retrieved successfully (empty array if no history found)
           content:
             application/json:
               schema:
@@ -408,13 +420,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/HistoryEntry'
         '400':
-          description: Bad request - invalid date format
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '200':
-          description: No history found
+          description: Bad request - invalid parameters (date format, limit, or offset)
           content:
             application/json:
               schema:
