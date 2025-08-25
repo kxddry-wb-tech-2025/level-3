@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 	"warehousecontrol/src/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -188,5 +189,45 @@ func (s *Server) createJWT() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"jwt": signed})
+	}
+}
+
+func (s *Server) getHistory() gin.HandlerFunc {
+	log := s.log.With().Str("handler", "getHistory").Logger()
+	return func(c *ginext.Context) {
+
+		dateFromStr := c.Query("date_from")
+		dateToStr := c.Query("date_to")
+		userID := c.Query("user_id")
+		itemID := c.Query("item_id")
+		action := c.Query("action")
+		role := c.Query("role")
+		var dateFrom, dateTo time.Time
+		var err error
+		if dateFromStr != "" {
+			dateFrom, err = time.Parse(time.RFC3339, dateFromStr)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date_from"})
+				return
+			}
+		}
+		if dateToStr != "" {
+			dateTo, err = time.Parse(time.RFC3339, dateToStr)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date_to"})
+				return
+			}
+		}
+		history, err := s.historySvc.GetHistory(c.Request.Context(), userID, itemID, action, dateFrom, dateTo, role)
+		if err != nil {
+			if errors.Is(err, models.ErrItemNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			log.Error().Err(err).Msg("failed to get history")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, history)
 	}
 }

@@ -3,8 +3,10 @@ package delivery
 import (
 	"context"
 	"net/http"
+	"time"
 	"warehousecontrol/src/internal/config"
 	"warehousecontrol/src/internal/models"
+	"warehousecontrol/src/internal/repo"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -25,23 +27,29 @@ type AuthService interface {
 	CreateJWT(ctx context.Context, role models.Role) (string, error)
 }
 
-type Server struct {
-	log     zerolog.Logger
-	r       *ginext.Engine
-	svc     Service
-	authSvc AuthService
-	v       *validator.Validate
+type HistoryService interface {
+	GetHistory(ctx context.Context, filterByUserID string, filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time, filterByUserRole string) ([]repo.HistoryEntry, error)
 }
 
-func NewServer(cfg *config.Config, svc Service, authSvc AuthService) *Server {
+type Server struct {
+	log        zerolog.Logger
+	r          *ginext.Engine
+	svc        Service
+	authSvc    AuthService
+	historySvc HistoryService
+	v          *validator.Validate
+}
+
+func NewServer(cfg *config.Config, svc Service, authSvc AuthService, historySvc HistoryService) *Server {
 	r := ginext.New()
 	log := zlog.Logger.With().Str("service", "server").Logger()
 	s := &Server{
-		log:     log,
-		r:       r,
-		svc:     svc,
-		authSvc: authSvc,
-		v:       validator.New(),
+		log:        log,
+		r:          r,
+		svc:        svc,
+		authSvc:    authSvc,
+		historySvc: historySvc,
+		v:          validator.New(),
 	}
 	s.registerRoutes(cfg)
 
@@ -70,6 +78,7 @@ func (s *Server) registerRoutes(cfg *config.Config) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 	meta.POST("/jwt/:role", s.createJWT())
+	meta.GET("/history", s.getHistory())
 }
 
 func (s *Server) Run(address ...string) error {
