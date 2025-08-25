@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"salestracker/src/internal/models"
-	"salestracker/src/internal/repo"
+	"salestracker/src/internal/storage"
 )
 
 type Repository interface {
@@ -61,7 +61,7 @@ func (u *Usecase) GetItems(ctx context.Context) ([]models.Item, error) {
 		items = items2
 		return err
 	}); err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
+		if errors.Is(err, storage.ErrNotFound) {
 			return nil, models.ErrItemNotFound
 		}
 
@@ -109,7 +109,7 @@ func (u *Usecase) GetAnalytics(ctx context.Context) (models.Analytics, error) {
 		analytics = analytics2
 		return err
 	}); err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
+		if errors.Is(err, storage.ErrNotFound) {
 			return models.Analytics{}, models.ErrItemNotFound
 		}
 
