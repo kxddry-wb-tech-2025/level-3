@@ -14,11 +14,13 @@ import (
 	"github.com/kxddry/wbf/dbpg"
 )
 
+// TxManager is a transaction manager that manages the database transactions.
 type TxManager struct {
 	db    *dbpg.DB
 	repos *Repositories
 }
 
+// New creates a new TxManager.
 func New(masterDSN string, slaveDSNs ...string) (*TxManager, error) {
 	db, err := dbpg.New(masterDSN, slaveDSNs, &dbpg.Options{
 		MaxOpenConns: 100,
@@ -46,6 +48,7 @@ func New(masterDSN string, slaveDSNs ...string) (*TxManager, error) {
 	return &TxManager{db: db, repos: repos}, db.Master.Ping()
 }
 
+// Close closes the TxManager.
 func (m *TxManager) Close() error {
 	for _, slave := range m.db.Slaves {
 		_ = slave.Close()
@@ -56,12 +59,14 @@ func (m *TxManager) Close() error {
 	return m.db.Master.Close()
 }
 
+// Repositories is a struct that contains the repositories.
 type Repositories struct {
 	EventRepository        *events.EventRepository
-	BookingRepository      *booking.BookingRepository
+	BookingRepository      *booking.Repository
 	NotificationRepository *notifications.NotificationRepository
 }
 
+// NewTxManager creates a new TxManager.
 func NewTxManager(db *dbpg.DB, repos *Repositories) *TxManager {
 	return &TxManager{db: db, repos: repos}
 }
@@ -73,30 +78,37 @@ type tx struct {
 	tx    *sql.Tx
 }
 
+// CreateEvent creates a new event.
 func (t *tx) CreateEvent(ctx context.Context, event domain.CreateEventRequest) (string, error) {
 	return t.repos.EventRepository.CreateEvent(storage.WithTx(ctx, t.tx), event)
 }
 
+// UpdateEvent updates an event.
 func (t *tx) UpdateEvent(ctx context.Context, event domain.Event) error {
 	return t.repos.EventRepository.UpdateEvent(storage.WithTx(ctx, t.tx), event)
 }
 
+// GetEvent gets an event by its ID.
 func (t *tx) GetEvent(ctx context.Context, eventID string) (domain.Event, error) {
 	return t.repos.EventRepository.GetEvent(storage.WithTx(ctx, t.tx), eventID)
 }
 
+// Book books a ticket for an event.
 func (t *tx) Book(ctx context.Context, eventID, userID string, paymentDeadline time.Time) (string, error) {
 	return t.repos.BookingRepository.Book(storage.WithTx(ctx, t.tx), eventID, userID, paymentDeadline, false)
 }
 
+// GetBooking gets a booking by its ID.
 func (t *tx) GetBooking(ctx context.Context, bookingID string) (domain.Booking, error) {
 	return t.repos.BookingRepository.GetBooking(storage.WithTx(ctx, t.tx), bookingID)
 }
 
+// Confirm confirms a booking.
 func (t *tx) Confirm(ctx context.Context, bookingID string) (string, error) {
 	return t.repos.BookingRepository.Confirm(storage.WithTx(ctx, t.tx), bookingID)
 }
 
+// BookingSetDecremented sets the decremented flag for a booking.
 func (t *tx) BookingSetDecremented(ctx context.Context, bookingID string, decremented bool) error {
 	return t.repos.BookingRepository.BookingSetDecremented(storage.WithTx(ctx, t.tx), bookingID, decremented)
 }

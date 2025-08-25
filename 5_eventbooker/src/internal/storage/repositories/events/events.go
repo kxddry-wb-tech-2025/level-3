@@ -10,10 +10,12 @@ import (
 	"github.com/kxddry/wbf/dbpg"
 )
 
+// EventRepository is a repository for the event domain.
 type EventRepository struct {
 	db *dbpg.DB
 }
 
+// New creates a new EventRepository.
 func New(masterDSN string, slaveDSNs ...string) (*EventRepository, error) {
 	db, err := dbpg.New(masterDSN, slaveDSNs, nil)
 	if err != nil {
@@ -22,6 +24,7 @@ func New(masterDSN string, slaveDSNs ...string) (*EventRepository, error) {
 	return &EventRepository{db: db}, nil
 }
 
+// Close closes the EventRepository.
 func (r *EventRepository) Close() error {
 	for _, slave := range r.db.Slaves {
 		_ = slave.Close()
@@ -42,6 +45,7 @@ CREATE TABLE events (
 )
 */
 
+// CreateEvent creates a new event.
 func (r *EventRepository) CreateEvent(ctx context.Context, event domain.CreateEventRequest) (string, error) {
 	var id string
 	if tx, ok := storage.TxFromContext(ctx); ok {
@@ -58,6 +62,7 @@ func (r *EventRepository) CreateEvent(ctx context.Context, event domain.CreateEv
 	return id, nil
 }
 
+// UpdateEvent updates an event.
 func (r *EventRepository) UpdateEvent(ctx context.Context, event domain.Event) error {
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		res, err := tx.ExecContext(ctx, `UPDATE events SET name = $1, capacity = $2, available = $3, date = $4, payment_ttl = $5 WHERE id = $6`, event.Name, event.Capacity, event.Available, event.Date, event.PaymentTTL, event.ID)
@@ -87,6 +92,7 @@ func (r *EventRepository) UpdateEvent(ctx context.Context, event domain.Event) e
 	return nil
 }
 
+// GetEvent gets an event by its ID.
 func (r *EventRepository) GetEvent(ctx context.Context, id string) (domain.Event, error) {
 	var rows *sql.Rows
 	var err error
