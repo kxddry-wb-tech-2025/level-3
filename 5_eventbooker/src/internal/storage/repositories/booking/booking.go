@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kxddry/wbf/dbpg"
+	"github.com/kxddry/wbf/zlog"
 )
 
 // Repository is a repository for the booking domain.
@@ -49,6 +50,7 @@ CREATE TABLE bookings (
 
 // Book books a ticket for an event.
 func (r *Repository) Book(ctx context.Context, eventID, userID string, paymentDeadline time.Time, decremented bool) (string, error) {
+	log := zlog.Logger.With().Str("component", "booking").Logger().With().Str("operation", "Book").Logger()
 	var id string
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		err := tx.QueryRowContext(ctx, `INSERT INTO bookings (event_id, user_id, payment_deadline, decremented, status) VALUES ($1, $2, $3, $4, $5) RETURNING id`, eventID, userID, paymentDeadline, decremented, domain.BookingStatusPending).Scan(&id)
@@ -56,15 +58,18 @@ func (r *Repository) Book(ctx context.Context, eventID, userID string, paymentDe
 			if errors.Is(err, sql.ErrNoRows) {
 				return "", storage.ErrEventNotFound
 			}
+			log.Error().Err(err).Msg("failed to book ticket")
 			return "", err
 		}
 		return id, nil
 	}
+	log.Warn().Msg("no transaction found, using master connection")
 	err := r.db.Master.QueryRowContext(ctx, `INSERT INTO bookings (event_id, user_id, payment_deadline, decremented, status) VALUES ($1, $2, $3, $4, $5) RETURNING id`, eventID, userID, paymentDeadline, decremented, domain.BookingStatusPending).Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", storage.ErrEventNotFound
 		}
+		log.Error().Err(err).Msg("failed to book ticket")
 		return "", err
 	}
 	return id, nil
@@ -72,13 +77,16 @@ func (r *Repository) Book(ctx context.Context, eventID, userID string, paymentDe
 
 // BookingSetDecremented sets the decremented flag for a booking.
 func (r *Repository) BookingSetDecremented(ctx context.Context, bookingID string, decremented bool) error {
+	log := zlog.Logger.With().Str("component", "booking").Logger().With().Str("operation", "BookingSetDecremented").Logger()
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		res, err := tx.ExecContext(ctx, `UPDATE bookings SET decremented = $1 WHERE id = $2`, decremented, bookingID)
 		if err != nil {
+			log.Error().Err(err).Msg("failed to set decremented flag")
 			return err
 		}
 		rowsAffected, err := res.RowsAffected()
 		if err != nil {
+			log.Error().Err(err).Msg("failed to get rows affected")
 			return err
 		}
 		if rowsAffected == 0 {
@@ -86,15 +94,19 @@ func (r *Repository) BookingSetDecremented(ctx context.Context, bookingID string
 		}
 		return nil
 	}
+	log.Warn().Msg("no transaction found, using master connection")
 	res, err := r.db.ExecContext(ctx, `UPDATE bookings SET decremented = $1 WHERE id = $2`, decremented, bookingID)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to set decremented flag")
 		return err
 	}
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
+		log.Error().Err(err).Msg("failed to get rows affected")
 		return err
 	}
 	if rowsAffected == 0 {
+		log.Error().Msg("booking not found")
 		return storage.ErrBookingNotFound
 	}
 	return nil
@@ -102,6 +114,7 @@ func (r *Repository) BookingSetDecremented(ctx context.Context, bookingID string
 
 // BookingSetStatus sets the status for a booking.
 func (r *Repository) BookingSetStatus(ctx context.Context, bookingID string, status string) error {
+	log := zlog.Logger.With().Str("component", "booking").Logger().With().Str("operation", "BookingSetStatus").Logger()
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		res, err := tx.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, status, bookingID)
 		if err != nil {
@@ -116,13 +129,15 @@ func (r *Repository) BookingSetStatus(ctx context.Context, bookingID string, sta
 		}
 		return nil
 	}
-
+	log.Warn().Msg("no transaction found, using master connection")
 	res, err := r.db.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, status, bookingID)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to set status")
 		return err
 	}
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
+		log.Error().Err(err).Msg("failed to get rows affected")
 		return err
 	}
 	if rowsAffected == 0 {
@@ -133,6 +148,7 @@ func (r *Repository) BookingSetStatus(ctx context.Context, bookingID string, sta
 
 // GetBooking gets a booking by its ID.
 func (r *Repository) GetBooking(ctx context.Context, bookingID string) (domain.Booking, error) {
+	log := zlog.Logger.With().Str("component", "booking").Logger().With().Str("operation", "GetBooking").Logger()
 	var b domain.Booking
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		err := tx.QueryRowContext(ctx, `SELECT event_id, user_id, payment_deadline, status, decremented FROM bookings WHERE id = $1`, bookingID).Scan(&b.EventID, &b.UserID, &b.PaymentDeadline, &b.Status, &b.Decremented)
@@ -140,16 +156,20 @@ func (r *Repository) GetBooking(ctx context.Context, bookingID string) (domain.B
 			if errors.Is(err, sql.ErrNoRows) {
 				return domain.Booking{}, storage.ErrBookingNotFound
 			}
+			log.Error().Err(err).Msg("failed to get booking")
 			return domain.Booking{}, err
 		}
 		b.ID = bookingID
 		return b, nil
 	}
+	log.Warn().Msg("no transaction found, using master connection")
 	err := r.db.Master.QueryRowContext(ctx, `SELECT event_id, user_id, payment_deadline, status, decremented FROM bookings WHERE id = $1`, bookingID).Scan(&b.EventID, &b.UserID, &b.PaymentDeadline, &b.Status, &b.Decremented)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			log.Error().Msg("booking not found")
 			return domain.Booking{}, storage.ErrBookingNotFound
 		}
+		log.Error().Err(err).Msg("failed to get booking")
 		return domain.Booking{}, err
 	}
 	b.ID = bookingID
@@ -158,28 +178,35 @@ func (r *Repository) GetBooking(ctx context.Context, bookingID string) (domain.B
 
 // Confirm confirms a booking and returns the status.
 func (r *Repository) Confirm(ctx context.Context, bookingID string) (string, error) {
+	log := zlog.Logger.With().Str("component", "booking").Logger().With().Str("operation", "Confirm").Logger()
 	var status string
 	if tx, ok := storage.TxFromContext(ctx); ok {
 		res, err := tx.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, domain.BookingStatusConfirmed, bookingID)
 		if err != nil {
+			log.Error().Err(err).Msg("failed to confirm booking")
 			return "", err
 		}
 		rowsAffected, err := res.RowsAffected()
 		if err != nil {
+			log.Error().Err(err).Msg("failed to get rows affected")
 			return "", err
 		}
 		if rowsAffected == 0 {
+			log.Error().Msg("booking not found")
 			return "", storage.ErrBookingNotFound
 		}
 		status = domain.BookingStatusConfirmed
 		return status, nil
 	}
+	log.Warn().Msg("no transaction found, using master connection")
 	res, err := r.db.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, domain.BookingStatusConfirmed, bookingID)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to confirm booking")
 		return "", err
 	}
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
+		log.Error().Err(err).Msg("failed to get rows affected")
 		return "", err
 	}
 	if rowsAffected == 0 {

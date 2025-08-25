@@ -51,9 +51,8 @@ func (s *Scheduler) Run(ctx context.Context) {
 }
 
 func (s *Scheduler) publishDue(ctx context.Context, now time.Time) {
-	log := zlog.Logger.With().Str("component", "scheduler").Logger()
+	log := zlog.Logger.With().Str("component", "scheduler").Logger().With().Str("operation", "publishDue").Logger()
 	ids, err := s.store.PopDue(ctx, "due", now, 100)
-	log.Debug().Int("count", len(ids)).Msg("scheduler: pop due")
 	if err != nil {
 		log.Error().Err(err).Msg("scheduler: pop due")
 		return
@@ -87,16 +86,17 @@ func (s *Scheduler) publishDue(ctx context.Context, now time.Time) {
 }
 
 func (s *Scheduler) publishRetry(ctx context.Context, now time.Time) {
+	log := zlog.Logger.With().Str("component", "scheduler").Logger().With().Str("operation", "publishRetry").Logger()
 	ids, err := s.store.PopDue(ctx, "retry", now, 100)
 	if err != nil {
-		zlog.Logger.Error().Err(err).Msg("scheduler: pop retry")
+		log.Error().Err(err).Msg("scheduler: pop retry")
 		return
 	}
 	for _, id := range ids {
 		n, err := s.store.GetNotification(ctx, id)
 		if err != nil || n == nil {
 			if err != nil {
-				zlog.Logger.Error().Err(err).Str("id", id).Msg("scheduler: get notification (retry)")
+				log.Error().Err(err).Str("id", id).Msg("scheduler: get notification (retry)")
 			}
 			continue
 		}
@@ -108,7 +108,7 @@ func (s *Scheduler) publishRetry(ctx context.Context, now time.Time) {
 		_ = s.store.SaveNotification(ctx, n)
 		payload, _ := json.Marshal(n)
 		if err := s.q.Publish(ctx, payload); err != nil {
-			zlog.Logger.Error().Err(err).Str("id", id).Msg("scheduler: publish retry")
+			log.Error().Err(err).Str("id", id).Msg("scheduler: publish retry")
 			_ = s.store.AddToRetry(ctx, id, now.Add(5*time.Second))
 		}
 	}
