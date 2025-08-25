@@ -68,7 +68,7 @@ func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]
 
 	query += " ORDER BY changed_at DESC"
 
-	rows, err := r.db.Master.QueryContext(ctx, query)
+	rows, err := r.db.Master.QueryContext(ctx, query, queryArgs...)
 	if err != nil {
 		return nil, err
 	}
