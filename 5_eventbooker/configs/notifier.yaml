@@ -13,6 +13,7 @@ rabbitmq:
   port: "5672"
   username: "user"
   password: $RABBITMQ_PASSWORD
+  queue_name: "delayed_notifications"
 
 kafka:
   broker: "kafka:9092"

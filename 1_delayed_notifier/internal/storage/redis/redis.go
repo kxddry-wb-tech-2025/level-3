@@ -159,7 +159,6 @@ func (s *Storage) PopDue(ctx context.Context, which string, now time.Time, limit
 		return nil, err
 	}
 	if len(vals) == 0 {
-		log.Debug().Msg("no due ids found")
 		return nil, nil
 	}
 	if err := s.client.ZRem(ctx, zsetKey, anySlice(vals)...).Err(); err != nil {

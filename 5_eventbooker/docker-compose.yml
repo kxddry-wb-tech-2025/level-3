@@ -121,7 +121,7 @@ services:
 
   # notifier service
   notifier:
-    image: ghcr.io/kxddry-wb-tech-2025/level-3/1_delayed_notifier-debug
+    image: ghcr.io/kxddry-wb-tech-2025/level-3/1_delayed_notifier
     container_name: notifier
     expose:
       - 8085
@@ -146,7 +146,7 @@ services:
   eventbooker:
     build:
       context: .
-      dockerfile: Dockerfile-debug
+      dockerfile: Dockerfile
     container_name: eventbooker
     ports:
       - "8080:8080"
