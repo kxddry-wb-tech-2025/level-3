@@ -7,6 +7,7 @@ import (
 	"salestracker/src/internal/service"
 	"salestracker/src/internal/storage"
 	"salestracker/src/internal/storage/repositories/items"
+	"time"
 
 	"github.com/kxddry/wbf/dbpg"
 )
@@ -62,8 +63,8 @@ func (t *tx) DeleteItem(ctx context.Context, id string) error {
 	return t.repos.ItemRepository.DeleteItem(storage.WithTx(ctx, t.tx), id)
 }
 
-func (t *tx) Analytics(ctx context.Context) (models.Analytics, error) {
-	return t.repos.ItemRepository.Analytics(storage.WithTx(ctx, t.tx))
+func (t *tx) Analytics(ctx context.Context, from, to *time.Time) (models.Analytics, error) {
+	return t.repos.ItemRepository.Analytics(storage.WithTx(ctx, t.tx), from, to)
 }
 
 func (t *tx) Commit() error {

@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"salestracker/src/internal/models"
 	"salestracker/src/internal/storage"
+	"time"
 )
 
 type Repository interface {
@@ -12,7 +14,7 @@ type Repository interface {
 	ReadItems(ctx context.Context) ([]models.Item, error)
 	UpdateItem(ctx context.Context, id string, req models.PutRequest) (models.PutResponse, error)
 	DeleteItem(ctx context.Context, id string) error
-	Analytics(ctx context.Context) (models.Analytics, error)
+	Analytics(ctx context.Context, from, to *time.Time) (models.Analytics, error)
 }
 
 type Tx interface {
@@ -35,6 +37,11 @@ func NewUsecase(mgr TxManager) *Usecase {
 
 func (u *Usecase) PostItem(ctx context.Context, req models.PostRequest) (models.PostResponse, error) {
 	var resp models.PostResponse
+	if req.Date.IsZero() {
+		req.Date = time.Now()
+	} else if req.Date.After(time.Now()) {
+		return models.PostResponse{}, fmt.Errorf("%w: %s", models.ErrInvalidDate, "date is in the future")
+	}
 	if err := u.mgr.Do(ctx, func(ctx context.Context, tx Tx) error {
 		resp2, err := tx.CreateItem(ctx, req)
 		if err != nil {
@@ -98,10 +105,17 @@ func (u *Usecase) DeleteItem(ctx context.Context, id string) error {
 	return nil
 }
 
-func (u *Usecase) GetAnalytics(ctx context.Context) (models.Analytics, error) {
+func (u *Usecase) GetAnalytics(ctx context.Context, from, to *time.Time) (models.Analytics, error) {
 	var analytics models.Analytics
+	if from == nil {
+		from = &time.Time{}
+	}
+	if to == nil {
+		t := time.Now()
+		to = &t
+	}
 	if err := u.mgr.Do(ctx, func(ctx context.Context, tx Tx) error {
-		analytics2, err := tx.Analytics(ctx)
+		analytics2, err := tx.Analytics(ctx, from, to)
 		if err != nil {
 			return err
 		}
