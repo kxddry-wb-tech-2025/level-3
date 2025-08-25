@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"salestracker/src/internal/models"
 
@@ -15,6 +16,7 @@ type Service interface {
 	PostItem(ctx context.Context, req models.PostRequest) (models.PostResponse, error)
 	GetItems(ctx context.Context) ([]models.Item, error)
 	PutItem(ctx context.Context, id string, req models.PutRequest) (models.PutResponse, error)
+	DeleteItem(ctx context.Context, id string) error
 }
 
 // Server is a struct that contains the router.
@@ -88,11 +90,41 @@ func (s *Server) registerRoutes() {
 
 		res, err := s.svc.PutItem(c.Request.Context(), id, req)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			var status int
+			if errors.Is(err, models.ErrItemNotFound) {
+				status = http.StatusNotFound
+			} else {
+				status = http.StatusInternalServerError
+			}
+
+			c.JSON(status, gin.H{"error": err.Error()})
 			return
 		}
 
 		c.JSON(http.StatusOK, res)
+	})
+
+	r.DELETE("/items/:id", func(c *ginext.Context) {
+		id := c.Param("id")
+		if _, err := uuid.Parse(id); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		err := s.svc.DeleteItem(c.Request.Context(), id)
+		if err != nil {
+			var status int
+			if errors.Is(err, models.ErrItemNotFound) {
+				status = http.StatusNotFound
+			} else {
+				status = http.StatusInternalServerError
+			}
+
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.Status(http.StatusNoContent)
 	})
 
 }

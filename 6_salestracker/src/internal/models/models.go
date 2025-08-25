@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type Item struct {
 	ID          string    `json:"id"`
@@ -9,3 +12,7 @@ type Item struct {
 	Description string    `json:"description"`
 	Date        time.Time `json:"date"`
 }
+
+var (
+	ErrItemNotFound = errors.New("item not found")
+)
