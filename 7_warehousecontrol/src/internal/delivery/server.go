@@ -28,7 +28,7 @@ type AuthService interface {
 }
 
 type HistoryService interface {
-	GetHistory(ctx context.Context, filterByUserID string, filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time, filterByUserRole string, limit, offset int64) ([]repo.HistoryEntry, error)
+	GetHistory(ctx context.Context, role models.Role, filterByUserID string, filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time, filterByUserRole string, limit, offset int64) ([]repo.HistoryEntry, error)
 }
 
 type Server struct {

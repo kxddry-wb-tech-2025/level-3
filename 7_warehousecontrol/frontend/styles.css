@@ -1,8 +1,15 @@
 /* Custom styles for Warehouse Control System */
 
+/* Bootstrap 5 primary override to purple */
+:root {
+    --bs-primary: #6f42c1;
+    --bs-primary-rgb: 111, 66, 193;
+}
+
 body {
-    background-color: #f8f9fa;
+    background-color: #ffffff;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #212529;
 }
 
 .navbar-brand {
@@ -39,7 +46,7 @@ body {
 }
 
 .history-item {
-    border-left: 3px solid #007bff;
+    border-left: 3px solid #6f42c1;
     padding: 0.75rem;
     margin-bottom: 0.5rem;
     background-color: #f8f9fa;
@@ -117,8 +124,8 @@ body {
 }
 
 .form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    border-color: #6f42c1;
+    box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
 }
 
 .toast {
@@ -136,7 +143,7 @@ body {
     width: 20px;
     height: 20px;
     border: 3px solid #f3f3f3;
-    border-top: 3px solid #007bff;
+    border-top: 3px solid #6f42c1;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -206,41 +213,4 @@ body {
     }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    body {
-        background-color: #212529;
-        color: #f8f9fa;
-    }
-    
-    .card {
-        background-color: #343a40;
-        color: #f8f9fa;
-    }
-    
-    .card-header {
-        background-color: #495057;
-        border-bottom-color: #6c757d;
-    }
-    
-    .table {
-        color: #f8f9fa;
-    }
-    
-    .table th {
-        background-color: #495057;
-        color: #f8f9fa;
-    }
-    
-    .table-striped > tbody > tr:nth-of-type(odd) > td {
-        background-color: rgba(255, 255, 255, 0.05);
-    }
-    
-    .history-item {
-        background-color: #495057;
-    }
-    
-    .history-item:hover {
-        background-color: #6c757d;
-    }
-}
+/* Force light theme regardless of OS preference */

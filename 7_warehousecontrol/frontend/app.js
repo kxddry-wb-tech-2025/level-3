@@ -87,7 +87,9 @@ async function loginAs(role) {
         
         updateUI();
         loadItems();
-        loadHistory();
+        if (role !== 1) {
+            loadHistory();
+        }
         
         showToast('Успешно', `Вошли как ${ROLES[role].name}`, 'success');
         
@@ -180,9 +182,11 @@ function renderItems() {
                         <i class="bi bi-trash"></i>
                     </button>
                 ` : ''}
-                <button class="btn btn-sm btn-outline-info" onclick="viewItemHistory('${item.id}')" title="История">
-                    <i class="bi bi-clock-history"></i>
-                </button>
+                ${currentUser && currentUser.role !== 1 ? `
+                    <button class="btn btn-sm btn-outline-info" onclick="viewItemHistory('${item.id}')" title="История">
+                        <i class="bi bi-clock-history"></i>
+                    </button>
+                ` : ''}
             </td>
         </tr>
     `).join('');
@@ -319,6 +323,7 @@ async function deleteItem(id) {
 // History management
 async function loadHistory() {
     if (!currentToken) return;
+    if (currentUser && currentUser.role === 1) return;
     
     try {
         showLoading();
@@ -506,6 +511,8 @@ function exportHistory() {
 function updateUI() {
     const roleSpan = document.getElementById('currentRole');
     const addItemBtn = document.getElementById('addItemBtn');
+    const historySection = document.getElementById('historySection');
+    const itemsSection = document.getElementById('itemsSection');
     
     if (currentUser) {
         const role = ROLES[currentUser.role];
@@ -514,9 +521,30 @@ function updateUI() {
         `;
         
         addItemBtn.style.display = hasPermission('write') ? 'block' : 'none';
+        // Hide history for basic user role (1)
+        if (historySection) {
+            historySection.style.display = currentUser.role === 1 ? 'none' : 'block';
+        }
+        // Make items full-width for role 1, split otherwise
+        if (itemsSection) {
+            if (currentUser.role === 1) {
+                itemsSection.classList.remove('col-lg-8');
+                itemsSection.classList.add('col-lg-12');
+            } else {
+                itemsSection.classList.remove('col-lg-12');
+                itemsSection.classList.add('col-lg-8');
+            }
+        }
     } else {
         roleSpan.textContent = 'Выберите роль';
         addItemBtn.style.display = 'none';
+        if (historySection) {
+            historySection.style.display = 'block';
+        }
+        if (itemsSection) {
+            itemsSection.classList.remove('col-lg-12');
+            itemsSection.classList.add('col-lg-8');
+        }
     }
 }
 

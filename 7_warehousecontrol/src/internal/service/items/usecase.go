@@ -23,7 +23,7 @@ func NewUsecase(repo Repository) *Usecase {
 }
 
 func (u *Usecase) CreateItem(ctx context.Context, req models.PostItemRequest, role models.Role, userID string) (*models.Item, error) {
-	if role != models.RoleAdmin {
+	if role != models.RoleAdmin && role != models.RoleManager {
 		return nil, fmt.Errorf("unauthorized")
 	}
 

@@ -208,6 +208,17 @@ func (s *Server) getHistory() gin.HandlerFunc {
 		role := c.Query("role")
 		limitStr := c.Query("limit")
 		offsetStr := c.Query("offset")
+		userRole, ok := c.Get("role")
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing user role"})
+			return
+		}
+		userRoleInt, ok := userRole.(models.Role)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user role"})
+			return
+		}
+
 		var limit, offset int64
 		var err error
 
@@ -236,8 +247,12 @@ func (s *Server) getHistory() gin.HandlerFunc {
 				return
 			}
 		}
-		history, err := s.historySvc.GetHistory(c.Request.Context(), userID, itemID, action, dateFrom, dateTo, role, limit, offset)
+		history, err := s.historySvc.GetHistory(c.Request.Context(), userRoleInt, userID, itemID, action, dateFrom, dateTo, role, limit, offset)
 		if err != nil {
+			if errors.Is(err, models.ErrForbidden) {
+				c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+				return
+			}
 			if errors.Is(err, models.ErrItemNotFound) {
 				c.JSON(http.StatusOK, gin.H{"history": []repo.HistoryEntry{}})
 				return
