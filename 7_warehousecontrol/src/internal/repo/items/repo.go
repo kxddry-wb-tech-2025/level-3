@@ -42,7 +42,7 @@ func (r *Repository) GetItems(ctx context.Context) ([]models.Item, error) {
 	}
 	defer rows.Close()
 
-	var items []models.Item
+	items := []models.Item{}
 	for rows.Next() {
 		var item models.Item
 		err = rows.Scan(&item.ID, &item.Name, &item.Description, &item.Quantity, &item.Price)

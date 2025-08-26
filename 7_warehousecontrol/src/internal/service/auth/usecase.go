@@ -7,6 +7,7 @@ import (
 	"warehousecontrol/src/internal/models"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type UserRepository interface {
@@ -49,12 +50,17 @@ func (u *Usecase) VerifyJWT(ctx context.Context, tokenString string) (role model
 		return 0, "", fmt.Errorf("failed to get role: %w", err)
 	}
 
-	if role != claims["role"] {
+	if role != models.Role(claims["role"].(float64)) {
 		return 0, "", fmt.Errorf("incorrect role")
 	}
 
 	if role != models.RoleUser && role != models.RoleManager && role != models.RoleAdmin {
 		return 0, "", fmt.Errorf("incorrect role")
+	}
+
+	id = claims["id"].(string)
+	if uuid.Validate(id) != nil {
+		return 0, "", fmt.Errorf("invalid id")
 	}
 
 	return role, id, nil
@@ -76,7 +82,7 @@ func (u *Usecase) CreateJWT(ctx context.Context, role models.Role) (string, erro
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	signed, err := token.SignedString(u.secret)
+	signed, err := token.SignedString([]byte(u.secret))
 	if err != nil {
 		return "", err
 	}

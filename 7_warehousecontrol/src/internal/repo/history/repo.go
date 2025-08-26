@@ -2,6 +2,7 @@ package history
 
 import (
 	"context"
+	"fmt"
 	"warehousecontrol/src/internal/repo"
 
 	"github.com/kxddry/wbf/dbpg"
@@ -30,53 +31,65 @@ func (r *Repository) Close() error {
 
 func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]repo.HistoryEntry, error) {
 	query := `
-		SELECT id, action, item_id, user_id, changed_at FROM items_history
+		SELECT id, action, item_id, user_id, changed_at 
+		FROM items_history
+		WHERE 1=1
 	`
 	var queryArgs []any
+	argIdx := 1
 
 	if args != nil {
 		if args.FilterByAction != "" {
-			query += " AND action = $1"
+			query += fmt.Sprintf(" AND action = $%d", argIdx)
 			queryArgs = append(queryArgs, args.FilterByAction)
+			argIdx++
 		}
 
 		if args.FilterByItemID != "" {
-			query += " AND item_id = $1"
+			query += fmt.Sprintf(" AND item_id = $%d", argIdx)
 			queryArgs = append(queryArgs, args.FilterByItemID)
+			argIdx++
 		}
 
 		if args.FilterByUserID != "" {
-			query += " AND user_id = $1"
+			query += fmt.Sprintf(" AND user_id = $%d", argIdx)
 			queryArgs = append(queryArgs, args.FilterByUserID)
+			argIdx++
 		}
 
 		if !args.FilterDateFrom.IsZero() {
-			query += " AND changed_at >= $1"
+			query += fmt.Sprintf(" AND changed_at >= $%d", argIdx)
 			queryArgs = append(queryArgs, args.FilterDateFrom)
+			argIdx++
 		}
 
 		if !args.FilterDateTo.IsZero() {
-			query += " AND changed_at <= $1"
+			query += fmt.Sprintf(" AND changed_at <= $%d", argIdx)
 			queryArgs = append(queryArgs, args.FilterDateTo)
+			argIdx++
 		}
 
 		if args.FilterByUserRole != 0 {
-			query += " AND user_id IN (SELECT id FROM users WHERE role = $1)"
+			query += fmt.Sprintf(" AND user_id IN (SELECT id FROM users WHERE role = $%d)", argIdx)
 			queryArgs = append(queryArgs, args.FilterByUserRole)
-		}
-
-		if args.Limit > 0 {
-			query += " LIMIT $1"
-			queryArgs = append(queryArgs, args.Limit)
-		}
-
-		if args.Offset > 0 {
-			query += " OFFSET $1"
-			queryArgs = append(queryArgs, args.Offset)
+			argIdx++
 		}
 	}
 
 	query += " ORDER BY changed_at DESC"
+
+	if args != nil {
+		if args.Limit > 0 {
+			query += fmt.Sprintf(" LIMIT $%d", argIdx)
+			queryArgs = append(queryArgs, args.Limit)
+			argIdx++
+		}
+		if args.Offset > 0 {
+			query += fmt.Sprintf(" OFFSET $%d", argIdx)
+			queryArgs = append(queryArgs, args.Offset)
+			argIdx++
+		}
+	}
 
 	rows, err := r.db.Master.QueryContext(ctx, query, queryArgs...)
 	if err != nil {
@@ -84,7 +97,7 @@ func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]
 	}
 	defer rows.Close()
 
-	var output []repo.HistoryEntry
+	output := []repo.HistoryEntry{}
 	for rows.Next() {
 		var entry repo.HistoryEntry
 		err = rows.Scan(&entry.ID, &entry.Action, &entry.ItemID, &entry.UserID, &entry.ChangedAt)

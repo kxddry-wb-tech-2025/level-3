@@ -1,7 +1,8 @@
 storage:
-  master_dsn: "postgres://user:$POSTGRES_PASSWORD@localhost:5432/warehouse?sslmode=disable"
+  master_dsn: "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DB?sslmode=disable"
   slave_dsns:
-    - "postgres://user:$POSTGRES_PASSWORD@localhost:5432/warehouse?sslmode=disable"
+    # - "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DB?sslmode=disable"
+    - 
 
 server:
   address: ":8080"

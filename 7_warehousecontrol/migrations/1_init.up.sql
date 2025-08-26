@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS items (
 );
 
 CREATE TABLE IF NOT EXISTS items_history (
-    history_id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     action TEXT NOT NULL,
     item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id),

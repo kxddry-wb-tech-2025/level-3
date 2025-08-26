@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/kxddry/wbf/ginext"
 )
 
@@ -30,12 +29,6 @@ func (s *Server) VerifyJWT(c *ginext.Context) {
 	role, userID, err := s.authSvc.VerifyJWT(c.Request.Context(), tokenString)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		c.Abort()
-		return
-	}
-
-	if _, err := uuid.Parse(userID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
 		c.Abort()
 		return
 	}
