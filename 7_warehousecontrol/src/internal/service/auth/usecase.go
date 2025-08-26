@@ -10,20 +10,24 @@ import (
 	"github.com/google/uuid"
 )
 
+// UserRepository is the interface for the user repository.
 type UserRepository interface {
 	CreateUser(ctx context.Context, role models.Role) (id string, err error)
 	GetRole(ctx context.Context, id string) (role models.Role, err error)
 }
 
+// Usecase is the usecase for the auth.
 type Usecase struct {
 	userRepo UserRepository
 	secret   string
 }
 
+// NewUsecase creates a new usecase.
 func NewUsecase(userRepo UserRepository, secret string) *Usecase {
 	return &Usecase{userRepo: userRepo, secret: secret}
 }
 
+// VerifyJWT verifies the JWT token and returns the role and id.
 func (u *Usecase) VerifyJWT(ctx context.Context, tokenString string) (role models.Role, id string, err error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -66,6 +70,7 @@ func (u *Usecase) VerifyJWT(ctx context.Context, tokenString string) (role model
 	return role, id, nil
 }
 
+// CreateJWT creates a new JWT token.
 func (u *Usecase) CreateJWT(ctx context.Context, role models.Role) (string, error) {
 	id, err := u.userRepo.CreateUser(ctx, role)
 	if err != nil {

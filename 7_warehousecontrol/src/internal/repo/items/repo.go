@@ -9,10 +9,12 @@ import (
 	"github.com/kxddry/wbf/dbpg"
 )
 
+// Repository is the repository for the items.
 type Repository struct {
 	db *dbpg.DB
 }
 
+// New creates a new repository.
 func New(masterDSN string, slaveDSNs ...string) (*Repository, error) {
 	db, err := dbpg.New(masterDSN, slaveDSNs, nil)
 	if err != nil {
@@ -22,6 +24,7 @@ func New(masterDSN string, slaveDSNs ...string) (*Repository, error) {
 	return &Repository{db: db}, db.Master.Ping()
 }
 
+// CreateItem creates a new item.
 func (r *Repository) CreateItem(ctx context.Context, req models.PostItemRequest, userID string) (id string, err error) {
 	query := `
 	INSERT INTO items (name, description, quantity, price, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING id
@@ -31,6 +34,7 @@ func (r *Repository) CreateItem(ctx context.Context, req models.PostItemRequest,
 	return
 }
 
+// GetItems gets all items.
 func (r *Repository) GetItems(ctx context.Context) ([]models.Item, error) {
 	query := `
 		SELECT id, name, description, quantity, price FROM items WHERE deleted_at IS NULL ORDER BY created_at DESC
@@ -55,6 +59,7 @@ func (r *Repository) GetItems(ctx context.Context) ([]models.Item, error) {
 	return items, nil
 }
 
+// GetItem gets an item by ID.
 func (r *Repository) GetItem(ctx context.Context, id string) (item models.Item, err error) {
 	query := `
 		SELECT id, name, description, quantity, price FROM items WHERE id = $1 AND deleted_at IS NULL
@@ -70,6 +75,7 @@ func (r *Repository) GetItem(ctx context.Context, id string) (item models.Item, 
 	return item, nil
 }
 
+// UpdateItem updates an item.
 func (r *Repository) UpdateItem(ctx context.Context, req models.PutItemRequest, userID string) error {
 	query := `
 		UPDATE items SET name = $1, description = $2, quantity = $3, price = $4, updated_by = $5 WHERE id = $6
@@ -79,6 +85,7 @@ func (r *Repository) UpdateItem(ctx context.Context, req models.PutItemRequest, 
 	return err
 }
 
+// DeleteItem deletes an item.
 func (r *Repository) DeleteItem(ctx context.Context, id string, userID string) error {
 	query := `
 		UPDATE items SET deleted_at = NOW(), deleted_by = $1 WHERE id = $2 AND deleted_at IS NULL
@@ -95,6 +102,7 @@ func (r *Repository) DeleteItem(ctx context.Context, id string, userID string) e
 	return err
 }
 
+// Close closes the repository.
 func (r *Repository) Close() error {
 	for _, db := range r.db.Slaves {
 		_ = db.Close()

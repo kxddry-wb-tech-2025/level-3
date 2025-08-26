@@ -6,7 +6,7 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-// Config is the configuration for the warehousecontrol service.
+// Config is the configuration for the service.
 type Config struct {
 	Storage StorageConfig `yaml:"storage"`
 	Server  ServerConfig  `yaml:"server"`
@@ -30,7 +30,7 @@ type ServerConfig struct {
 	StaticDir string `yaml:"static_dir"`
 }
 
-// New creates a new Config instance.
+// MustLoad loads the configuration from the given path.
 func MustLoad(path string) *Config {
 	if path == "" {
 		path = "./config/app.yaml"

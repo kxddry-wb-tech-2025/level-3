@@ -25,25 +25,38 @@ type PostItemRequest struct {
 // PutItemRequest is the request body for the put item endpoint
 type PutItemRequest Item
 
+// Role is the role of the user.
 type Role int
 
+// Roles
+
 const (
+	// RoleUser is the user role.
 	RoleUser Role = iota + 1
+	// RoleManager is the manager role.
 	RoleManager
+	// RoleAdmin is the admin role.
 	RoleAdmin
 )
 
+// User is the user model.
 type User struct {
 	ID   string `json:"id"`
 	Role Role   `json:"role"`
 }
 
+// Actions
+
 const (
+	// ActionCreate is the create action.
 	ActionCreate = "create"
+	// ActionDelete is the delete action.
 	ActionDelete = "delete"
+	// ActionUpdate is the update action.
 	ActionUpdate = "update"
 )
 
+// HistoryEntry is the history entry model.
 type HistoryEntry struct {
 	ID        string          `json:"id"`
 	Action    string          `json:"action"`

@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Service is the interface for the service.
 type Service interface {
 	CreateItem(ctx context.Context, req models.PostItemRequest, role models.Role, userID string) (*models.Item, error)
 	GetItems(ctx context.Context) ([]models.Item, error)
@@ -21,17 +22,20 @@ type Service interface {
 	DeleteItem(ctx context.Context, id string, userID string, role models.Role) error
 }
 
+// AuthService is the interface for the auth service.
 type AuthService interface {
 	VerifyJWT(ctx context.Context, tokenString string) (role models.Role, userID string, err error)
 	CreateJWT(ctx context.Context, role models.Role) (string, error)
 }
 
+// HistoryService is the interface for the history service.
 type HistoryService interface {
 	GetHistory(ctx context.Context, role models.Role, filterByUserID string,
 		filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time,
 		filterByUserRole string, limit, offset int64) ([]models.HistoryEntry, error)
 }
 
+// Server is the server for the service.
 type Server struct {
 	log        zerolog.Logger
 	r          *ginext.Engine
@@ -41,6 +45,7 @@ type Server struct {
 	v          *validator.Validate
 }
 
+// NewServer creates a new server.
 func NewServer(cfg *config.Config, svc Service, authSvc AuthService, historySvc HistoryService) *Server {
 	r := ginext.New()
 	log := zlog.Logger.With().Str("service", "server").Logger()
@@ -57,6 +62,7 @@ func NewServer(cfg *config.Config, svc Service, authSvc AuthService, historySvc 
 	return s
 }
 
+// registerRoutes registers the routes for the server.
 func (s *Server) registerRoutes(cfg *config.Config) {
 	ui := s.r.Group("/ui")
 
@@ -84,6 +90,7 @@ func (s *Server) registerRoutes(cfg *config.Config) {
 	history.GET("", s.getHistory())
 }
 
+// Run runs the server.
 func (s *Server) Run(address ...string) error {
 	return s.r.Run(address...)
 }

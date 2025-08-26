@@ -10,18 +10,22 @@ import (
 	"github.com/google/uuid"
 )
 
+// Repository is the interface for the repository.
 type Repository interface {
 	GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]models.HistoryEntry, error)
 }
 
+// Usecase is the usecase for the history.
 type Usecase struct {
 	repo Repository
 }
 
+// NewUsecase creates a new usecase.
 func NewUsecase(repo Repository) *Usecase {
 	return &Usecase{repo: repo}
 }
 
+// GetHistory gets the history.
 func (u *Usecase) GetHistory(
 	ctx context.Context, role models.Role, filterByUserID string,
 	filterByItemID string, filterByAction string, filterDateFrom time.Time,

@@ -10,6 +10,7 @@ import (
 
 // middleware
 
+// VerifyJWT verifies the JWT token and sets the user ID and role in the context.
 func (s *Server) VerifyJWT(c *ginext.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {

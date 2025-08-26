@@ -11,10 +11,12 @@ import (
 	"github.com/kxddry/wbf/dbpg"
 )
 
+// Repository is the repository for the history.
 type Repository struct {
 	db *dbpg.DB
 }
 
+// New creates a new repository.
 func New(masterDSN string, slaveDSNs ...string) (*Repository, error) {
 	db, err := dbpg.New(masterDSN, slaveDSNs, nil)
 	if err != nil {
@@ -24,6 +26,7 @@ func New(masterDSN string, slaveDSNs ...string) (*Repository, error) {
 	return &Repository{db: db}, db.Master.Ping()
 }
 
+// Close closes the repository.
 func (r *Repository) Close() error {
 	for _, db := range r.db.Slaves {
 		_ = db.Close()
@@ -32,6 +35,7 @@ func (r *Repository) Close() error {
 	return r.db.Master.Close()
 }
 
+// GetHistory gets the history.
 func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]models.HistoryEntry, error) {
 	query := `
 		SELECT id, action, item_id, user_id, role, changed_at, old_data, new_data

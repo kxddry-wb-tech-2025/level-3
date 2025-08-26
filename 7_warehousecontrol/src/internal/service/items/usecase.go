@@ -6,6 +6,7 @@ import (
 	"warehousecontrol/src/internal/models"
 )
 
+// Repository is the interface for the repository.
 type Repository interface {
 	CreateItem(ctx context.Context, req models.PostItemRequest, userID string) (id string, err error)
 	GetItems(ctx context.Context) ([]models.Item, error)
@@ -14,14 +15,17 @@ type Repository interface {
 	DeleteItem(ctx context.Context, id string, userID string) error
 }
 
+// Usecase is the usecase for the items.
 type Usecase struct {
 	repo Repository
 }
 
+// NewUsecase creates a new usecase.
 func NewUsecase(repo Repository) *Usecase {
 	return &Usecase{repo: repo}
 }
 
+// CreateItem creates a new item.
 func (u *Usecase) CreateItem(ctx context.Context, req models.PostItemRequest, role models.Role, userID string) (*models.Item, error) {
 	if role != models.RoleAdmin && role != models.RoleManager {
 		return nil, fmt.Errorf("unauthorized")
@@ -41,6 +45,7 @@ func (u *Usecase) CreateItem(ctx context.Context, req models.PostItemRequest, ro
 	}, nil
 }
 
+// GetItems gets all items.
 func (u *Usecase) GetItems(ctx context.Context) ([]models.Item, error) {
 	var items []models.Item
 	items, err := u.repo.GetItems(ctx)
@@ -51,6 +56,7 @@ func (u *Usecase) GetItems(ctx context.Context) ([]models.Item, error) {
 	return items, nil
 }
 
+// UpdateItem updates an item.
 func (u *Usecase) UpdateItem(ctx context.Context, req models.PutItemRequest, role models.Role, userID string) (*models.Item, error) {
 	if role != models.RoleAdmin && role != models.RoleManager {
 		return nil, fmt.Errorf("unauthorized")
@@ -70,6 +76,7 @@ func (u *Usecase) UpdateItem(ctx context.Context, req models.PutItemRequest, rol
 	}, nil
 }
 
+// DeleteItem deletes an item.
 func (u *Usecase) DeleteItem(ctx context.Context, id string, userID string, role models.Role) error {
 	if role != models.RoleAdmin {
 		return fmt.Errorf("unauthorized")

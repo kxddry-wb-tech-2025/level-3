@@ -9,10 +9,12 @@ import (
 	"github.com/kxddry/wbf/dbpg"
 )
 
+// Repository is the repository for the users.
 type Repository struct {
 	db *dbpg.DB
 }
 
+// New creates a new repository.
 func New(masterDSN string, slaveDSNs ...string) (*Repository, error) {
 	db, err := dbpg.New(masterDSN, slaveDSNs, nil)
 	if err != nil {
@@ -22,6 +24,7 @@ func New(masterDSN string, slaveDSNs ...string) (*Repository, error) {
 	return &Repository{db: db}, db.Master.Ping()
 }
 
+// CreateUser creates a new user.
 func (r *Repository) CreateUser(ctx context.Context, role models.Role) (id string, err error) {
 	query := `
 		INSERT INTO users (role) VALUES ($1) RETURNING id
@@ -31,6 +34,7 @@ func (r *Repository) CreateUser(ctx context.Context, role models.Role) (id strin
 	return
 }
 
+// GetRole gets the role of a user.
 func (r *Repository) GetRole(ctx context.Context, id string) (role models.Role, err error) {
 	query := `
 		SELECT role FROM users WHERE id = $1
@@ -47,6 +51,7 @@ func (r *Repository) GetRole(ctx context.Context, id string) (role models.Role, 
 	return
 }
 
+// Close closes the repository.
 func (r *Repository) Close() error {
 	for _, db := range r.db.Slaves {
 		_ = db.Close()
