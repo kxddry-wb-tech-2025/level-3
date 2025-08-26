@@ -388,7 +388,7 @@ function renderHistory() {
                         ${getActionLabel(entry.action)}
                     </div>
                     <div class="history-user">
-                        Пользователь: ${entry.user_id}
+                        Пользователь: ${entry.user_id} ${getRoleBadge(entry.user_role)}
                     </div>
                     <div class="history-time">
                         ${formatDateTime(entry.changed_at)}
@@ -460,7 +460,7 @@ function viewHistoryDetails(entryId) {
                         </span>
                     </td></tr>
                     <tr><td><strong>ID товара:</strong></td><td>${entry.item_id}</td></tr>
-                    <tr><td><strong>Пользователь:</strong></td><td>${entry.user_id}</td></tr>
+                    <tr><td><strong>Пользователь:</strong></td><td>${entry.user_id} ${getRoleBadge(entry.user_role)}</td></tr>
                     <tr><td><strong>Дата:</strong></td><td>${formatDateTime(entry.changed_at)}</td></tr>
                 </table>
             </div>
@@ -483,11 +483,12 @@ function exportHistory() {
     }
     
     const csvContent = [
-        ['Действие', 'ID товара', 'Пользователь', 'Дата'],
+        ['Действие', 'ID товара', 'Пользователь', 'Роль', 'Дата'],
         ...history.map(entry => [
             getActionLabel(entry.action),
             entry.item_id,
             entry.user_id,
+            getRoleName(entry.user_role),
             formatDateTime(entry.changed_at)
         ])
     ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -560,6 +561,34 @@ function getActionLabel(action) {
         'delete': 'Удаление'
     };
     return labels[action] || action;
+}
+
+function getRoleName(roleValue) {
+    if (roleValue == null) return '';
+    if (typeof roleValue === 'number') {
+        const mapNum = { 1: 'Зритель', 2: 'Менеджер', 3: 'Админ' };
+        return mapNum[roleValue] || String(roleValue);
+    }
+    const value = String(roleValue).toLowerCase();
+    const map = { '1': 'Зритель', '2': 'Менеджер', '3': 'Админ', 'user': 'Зритель', 'manager': 'Менеджер', 'admin': 'Админ' };
+    return map[value] || roleValue;
+}
+
+function getRoleClass(roleValue) {
+    if (roleValue == null) return 'user';
+    if (typeof roleValue === 'number') {
+        return ROLES[roleValue] ? ROLES[roleValue].class : 'user';
+    }
+    const value = String(roleValue).toLowerCase();
+    const map = { '1': 'user', '2': 'manager', '3': 'admin', 'user': 'user', 'manager': 'manager', 'admin': 'admin' };
+    return map[value] || 'user';
+}
+
+function getRoleBadge(roleValue) {
+    const roleName = getRoleName(roleValue);
+    if (!roleName) return '';
+    const roleClass = getRoleClass(roleValue);
+    return `<span class="role-badge ${roleClass}" style="margin-left: .25rem;">${roleName}</span>`;
 }
 
 function formatDateTime(dateString) {

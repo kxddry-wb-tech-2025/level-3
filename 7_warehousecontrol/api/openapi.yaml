@@ -120,7 +120,7 @@ components:
           type: string
           format: uuid
           description: ID of the user who performed the action
-        role:
+        user_role:
           type: integer
           enum: [2, 3]
           description: Role of the user who performed the action
@@ -128,6 +128,12 @@ components:
           type: string
           format: date-time
           description: Timestamp when the action was performed
+        old_data:
+          type: object
+          description: Old data of the item
+        new_data:
+          type: object
+          description: New data of the item
       required:
         - id
         - action

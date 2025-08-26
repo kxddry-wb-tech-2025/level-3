@@ -32,7 +32,7 @@ func (r *Repository) Close() error {
 
 func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]models.HistoryEntry, error) {
 	query := `
-		SELECT id, action, item_id, user_id, role, changed_at 
+		SELECT id, action, item_id, user_id, role, changed_at, old_data, new_data
 		FROM items_history
 		WHERE 1=1
 	`
@@ -101,7 +101,7 @@ func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]
 	output := []models.HistoryEntry{}
 	for rows.Next() {
 		var entry models.HistoryEntry
-		err = rows.Scan(&entry.ID, &entry.Action, &entry.ItemID, &entry.UserID, &entry.UserRole, &entry.ChangedAt)
+		err = rows.Scan(&entry.ID, &entry.Action, &entry.ItemID, &entry.UserID, &entry.UserRole, &entry.ChangedAt, &entry.OldData, &entry.NewData)
 		if err != nil {
 			return nil, err
 		}

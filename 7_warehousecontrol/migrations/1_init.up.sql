@@ -27,33 +27,56 @@ CREATE TABLE IF NOT EXISTS items_history (
     item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id),
     role INTEGER NOT NULL,
-    changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    old_data JSONB,
+    new_data JSONB
 );
+
 
 CREATE OR REPLACE FUNCTION log_items_changes()
 RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        INSERT INTO items_history (action, item_id, user_id, role)
-        VALUES ('INSERT', NEW.id, NEW.created_by,
-        (SELECT role FROM users WHERE id = NEW.created_by));
-
+        INSERT INTO items_history (action, item_id, user_id, role, old_data, new_data)
+        VALUES (
+            'INSERT',
+            NEW.id,
+            NEW.created_by,
+            (SELECT role FROM users WHERE id = NEW.created_by),
+            NULL,
+            to_jsonb(NEW)
+        );
         RETURN NEW;
+
     ELSIF TG_OP = 'UPDATE' THEN
         IF NEW.deleted_at IS NOT NULL AND OLD.deleted_at IS NULL THEN
-            INSERT INTO items_history (action, item_id, user_id, role)
-            VALUES ('DELETE', NEW.id, NEW.deleted_by,
-            (SELECT role FROM users WHERE id = NEW.deleted_by));
+            INSERT INTO items_history (action, item_id, user_id, role, old_data, new_data)
+            VALUES (
+                'DELETE',
+                NEW.id,
+                NEW.deleted_by,
+                (SELECT role FROM users WHERE id = NEW.deleted_by),
+                to_jsonb(OLD),
+                to_jsonb(NEW)
+            );
         ELSE
-            INSERT INTO items_history (action, item_id, user_id, role)
-            VALUES ('UPDATE', NEW.id, NEW.updated_by,
-            (SELECT role FROM users WHERE id = NEW.updated_by));
+            INSERT INTO items_history (action, item_id, user_id, role, old_data, new_data)
+            VALUES (
+                'UPDATE',
+                NEW.id,
+                NEW.updated_by,
+                (SELECT role FROM users WHERE id = NEW.updated_by),
+                to_jsonb(OLD),
+                to_jsonb(NEW)
+            );
         END IF;
         RETURN NEW;
     END IF;
+
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+
 
 DROP TRIGGER IF EXISTS items_changes_trigger ON items;
 

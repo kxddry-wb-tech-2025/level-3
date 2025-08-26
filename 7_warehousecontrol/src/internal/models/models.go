@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Item is the item model
 type Item struct {
@@ -42,10 +45,12 @@ const (
 )
 
 type HistoryEntry struct {
-	ID        string    `json:"id"`
-	Action    string    `json:"action"`
-	ItemID    string    `json:"item_id"`
-	UserID    string    `json:"user_id"`
-	UserRole  Role      `json:"user_role"`
-	ChangedAt time.Time `json:"changed_at"`
+	ID        string          `json:"id"`
+	Action    string          `json:"action"`
+	ItemID    string          `json:"item_id"`
+	UserID    string          `json:"user_id"`
+	UserRole  Role            `json:"user_role"`
+	ChangedAt time.Time       `json:"changed_at"`
+	OldData   json.RawMessage `json:"old_data"`
+	NewData   json.RawMessage `json:"new_data"`
 }
