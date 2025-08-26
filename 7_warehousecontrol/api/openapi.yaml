@@ -110,7 +110,7 @@ components:
           description: Unique identifier for the history entry
         action:
           type: string
-          enum: [create, update, delete]
+          enum: [INSERT, UPDATE, DELETE]
           description: Action performed on the item
         item_id:
           type: string
@@ -130,9 +130,11 @@ components:
           description: Timestamp when the action was performed
         old_data:
           type: object
+          nullable: true
           description: Old data of the item
         new_data:
           type: object
+          nullable: true
           description: New data of the item
       required:
         - id

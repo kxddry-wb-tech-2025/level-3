@@ -381,10 +381,10 @@ function renderHistory() {
     }
     
     container.innerHTML = history.map(entry => `
-        <div class="history-item ${entry.action}" onclick="viewHistoryDetails('${entry.id}')">
+        <div class="history-item ${String(entry.action).toLowerCase()}" onclick="viewHistoryDetails('${entry.id}')">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="history-action ${entry.action}">
+                    <div class="history-action ${String(entry.action).toLowerCase()}">
                         ${getActionLabel(entry.action)}
                     </div>
                     <div class="history-user">
@@ -448,6 +448,7 @@ function viewHistoryDetails(entryId) {
     const entry = history.find(h => h.id === entryId);
     if (!entry) return;
     
+    const diffHtml = buildDiffHtml(entry.old_data, entry.new_data);
     const detailsHtml = `
         <div class="row">
             <div class="col-md-6">
@@ -455,7 +456,7 @@ function viewHistoryDetails(entryId) {
                 <table class="table table-sm">
                     <tr><td><strong>ID записи:</strong></td><td>${entry.id}</td></tr>
                     <tr><td><strong>Действие:</strong></td><td>
-                        <span class="history-action ${entry.action}">
+                        <span class="history-action ${String(entry.action).toLowerCase()}">
                             ${getActionLabel(entry.action)}
                         </span>
                     </td></tr>
@@ -465,8 +466,8 @@ function viewHistoryDetails(entryId) {
                 </table>
             </div>
             <div class="col-md-6">
-                <h6>Информация о товаре</h6>
-                ${getItemInfo(entry.item_id)}
+                <h6>Изменения</h6>
+                ${diffHtml}
             </div>
         </div>
     `;
@@ -483,13 +484,14 @@ function exportHistory() {
     }
     
     const csvContent = [
-        ['Действие', 'ID товара', 'Пользователь', 'Роль', 'Дата'],
+        ['Действие', 'ID товара', 'Пользователь', 'Роль', 'Дата', 'Изменения'],
         ...history.map(entry => [
             getActionLabel(entry.action),
             entry.item_id,
             entry.user_id,
             getRoleName(entry.user_role),
-            formatDateTime(entry.changed_at)
+            formatDateTime(entry.changed_at),
+            diffPairsToInline(buildDiffPairs(entry.old_data, entry.new_data))
         ])
     ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
     
@@ -555,12 +557,125 @@ function hasPermission(permission) {
 }
 
 function getActionLabel(action) {
+    const a = String(action).toLowerCase();
     const labels = {
-        'create': 'Создание',
-        'update': 'Обновление',
-        'delete': 'Удаление'
+        'INSERT': 'Создание',
+        'UPDATE': 'Обновление',
+        'DELETE': 'Удаление'
     };
-    return labels[action] || action;
+    return labels[a] || action;
+}
+
+function buildDiffHtml(oldData, newData) {
+    // Normalize nulls
+    const oldObj = oldData || {};
+    const newObj = newData || {};
+    const keys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)])).sort();
+    if (keys.length === 0) {
+        return '<p class="text-muted">Нет данных для сравнения</p>';
+    }
+
+    const changedKeys = keys.filter(k => !deepEqual(oldObj[k], newObj[k]));
+    if (changedKeys.length === 0) {
+        return '<p class="text-muted">Изменений нет</p>';
+    }
+
+    const rows = changedKeys.map(k => {
+        const oldVal = formatValue(oldObj[k]);
+        const newVal = formatValue(newObj[k]);
+        return `
+            <tr class="table-warning">
+                <td><code>${escapeHtml(k)}</code></td>
+                <td>${oldVal}</td>
+                <td>${newVal}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Поле</th>
+                        <th>Было</th>
+                        <th>Стало</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// Build pairs of differences for CSV/inline representation
+function buildDiffPairs(oldData, newData) {
+    const oldObj = oldData || {};
+    const newObj = newData || {};
+    const keys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)])).sort();
+    const changed = [];
+    for (const k of keys) {
+        if (!deepEqual(oldObj[k], newObj[k])) {
+            changed.push({ field: k, oldValue: oldObj[k], newValue: newObj[k] });
+        }
+    }
+    return changed;
+}
+
+function diffPairsToInline(pairs) {
+    if (!pairs || pairs.length === 0) return '';
+    return pairs.map(p => {
+        const oldV = inlineValue(p.oldValue);
+        const newV = inlineValue(p.newValue);
+        return `${p.field}: ${oldV} -> ${newV}`;
+    }).join('; ');
+}
+
+function inlineValue(v) {
+    if (v === null || v === undefined) return '—';
+    if (typeof v === 'object') {
+        try { return JSON.stringify(v); } catch (e) { return String(v); }
+    }
+    if (typeof v === 'boolean') return v ? 'true' : 'false';
+    return String(v);
+}
+
+function deepEqual(a, b) {
+    if (a === b) return true;
+    if (typeof a !== typeof b) return false;
+    if (a === null || b === null) return false;
+    if (typeof a !== 'object') return false;
+    if (Array.isArray(a) || Array.isArray(b)) {
+        if (!Array.isArray(a) || !Array.isArray(b)) return false;
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (!deepEqual(a[i], b[i])) return false;
+        }
+        return true;
+    }
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) return false;
+    for (const key of aKeys) {
+        if (!deepEqual(a[key], b[key])) return false;
+    }
+    return true;
+}
+
+function formatValue(value) {
+    if (value === null || value === undefined) return '<span class="text-muted">—</span>';
+    if (typeof value === 'object') {
+        try {
+            return `<pre class="mb-0 small">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+        } catch (e) {
+            return `<code>${escapeHtml(String(value))}</code>`;
+        }
+    }
+    if (typeof value === 'number') return String(value);
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    return escapeHtml(String(value));
 }
 
 function getRoleName(roleValue) {

@@ -2,6 +2,8 @@ package history
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"warehousecontrol/src/internal/models"
 	"warehousecontrol/src/internal/repo"
@@ -101,9 +103,16 @@ func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]
 	output := []models.HistoryEntry{}
 	for rows.Next() {
 		var entry models.HistoryEntry
-		err = rows.Scan(&entry.ID, &entry.Action, &entry.ItemID, &entry.UserID, &entry.UserRole, &entry.ChangedAt, &entry.OldData, &entry.NewData)
+		var old, new sql.NullString
+		err = rows.Scan(&entry.ID, &entry.Action, &entry.ItemID, &entry.UserID, &entry.UserRole, &entry.ChangedAt, &old, &new)
 		if err != nil {
 			return nil, err
+		}
+		if old.Valid {
+			entry.OldData = json.RawMessage(old.String)
+		}
+		if new.Valid {
+			entry.NewData = json.RawMessage(new.String)
 		}
 		output = append(output, entry)
 	}
