@@ -5,6 +5,7 @@ let currentUser = null;
 let currentToken = null;
 let items = [];
 let history = [];
+let roleTokenCache = { 1: null, 2: null, 3: null };
 
 // API configuration
 const API_BASE = '/api/v1';
@@ -101,6 +102,61 @@ async function loginAs(role) {
     }
 }
 
+async function selectRole(role) {
+    try {
+        showLoading();
+        // Use cached token if exists
+        const cached = roleTokenCache[role] || localStorage.getItem(`warehouse_token_role_${role}`);
+        if (cached) {
+            currentToken = cached;
+            currentUser = { role: role };
+            localStorage.setItem('warehouse_token', currentToken);
+            localStorage.setItem('warehouse_role', role);
+            updateUI();
+            await loadItems();
+            if (role !== 1) {
+                await loadHistory();
+            }
+            showToast('Успешно', `Выбрана роль ${ROLES[role].name}`, 'success');
+            return;
+        }
+        // Otherwise create new user of this role
+        await createNewUser(role);
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка', 'Не удалось выбрать роль', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function createNewUser(role) {
+    try {
+        showLoading();
+        const response = await fetch(`${API_BASE}/meta/jwt/${role}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        if (!response.ok) throw new Error('Failed to get JWT token');
+        const data = await response.json();
+        currentToken = data.jwt;
+        currentUser = { role: role };
+        // Cache per role as well as current
+        roleTokenCache[role] = currentToken;
+        localStorage.setItem(`warehouse_token_role_${role}`, currentToken);
+        localStorage.setItem('warehouse_token', currentToken);
+        localStorage.setItem('warehouse_role', role);
+        updateUI();
+        await loadItems();
+        if (role !== 1) {
+            await loadHistory();
+        }
+        showToast('Успешно', `Создан новый ${ROLES[role].name}`, 'success');
+    } catch (error) {
+        console.error('Create user error:', error);
+        showToast('Ошибка', 'Не удалось создать пользователя', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
 function logout() {
     currentUser = null;
     currentToken = null;
@@ -145,6 +201,10 @@ async function loadItems() {
 
 function renderItems() {
     const tbody = document.getElementById('itemsTableBody');
+    const actionsHeader = document.getElementById('actionsHeader');
+    if (actionsHeader) {
+        actionsHeader.style.display = hasPermission('write') || hasPermission('delete') || (currentUser && currentUser.role !== 1) ? '' : 'none';
+    }
     
     if (!items || items.length === 0) {
         tbody.innerHTML = `
@@ -171,7 +231,7 @@ function renderItems() {
                 </span>
             </td>
             <td>${formatPrice(item.price)} ₽</td>
-            <td class="item-actions">
+            <td class="item-actions" style="${currentUser && currentUser.role === 1 ? 'display:none;' : ''}">
                 ${hasPermission('write') ? `
                     <button class="btn btn-sm btn-outline-primary" onclick="editItem('${item.id}')" title="Редактировать">
                         <i class="bi bi-pencil"></i>
@@ -402,7 +462,11 @@ function renderHistory() {
     `).join('');
 }
 
-function viewItemHistory(itemId) {
+async function viewItemHistory(itemId) {
+    // Ensure history is loaded
+    if (!history || history.length === 0) {
+        await loadHistory();
+    }
     // Filter history for specific item
     const itemHistory = history.filter(h => h.item_id === itemId);
     
@@ -424,9 +488,9 @@ function viewItemHistory(itemId) {
                 </thead>
                 <tbody>
                     ${itemHistory.map(entry => `
-                        <tr>
+                        <tr style="cursor: pointer;" onclick="viewHistoryDetails('${entry.id}')" title="Открыть детали">
                             <td>
-                                <span class="history-action ${entry.action}">
+                                <span class="history-action ${String(entry.action).toLowerCase()}">
                                     ${getActionLabel(entry.action)}
                                 </span>
                             </td>
