@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // Item is the item model
 type Item struct {
 	ID          string  `json:"id"`
@@ -38,3 +40,12 @@ const (
 	ActionDelete = "delete"
 	ActionUpdate = "update"
 )
+
+type HistoryEntry struct {
+	ID        string    `json:"id"`
+	Action    string    `json:"action"`
+	ItemID    string    `json:"item_id"`
+	UserID    string    `json:"user_id"`
+	UserRole  Role      `json:"user_role"`
+	ChangedAt time.Time `json:"changed_at"`
+}

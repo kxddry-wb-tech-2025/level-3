@@ -3,6 +3,7 @@ package history
 import (
 	"context"
 	"fmt"
+	"warehousecontrol/src/internal/models"
 	"warehousecontrol/src/internal/repo"
 
 	"github.com/kxddry/wbf/dbpg"
@@ -29,9 +30,9 @@ func (r *Repository) Close() error {
 	return r.db.Master.Close()
 }
 
-func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]repo.HistoryEntry, error) {
+func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]models.HistoryEntry, error) {
 	query := `
-		SELECT id, action, item_id, user_id, changed_at 
+		SELECT id, action, item_id, user_id, role, changed_at 
 		FROM items_history
 		WHERE 1=1
 	`
@@ -97,10 +98,10 @@ func (r *Repository) GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]
 	}
 	defer rows.Close()
 
-	output := []repo.HistoryEntry{}
+	output := []models.HistoryEntry{}
 	for rows.Next() {
-		var entry repo.HistoryEntry
-		err = rows.Scan(&entry.ID, &entry.Action, &entry.ItemID, &entry.UserID, &entry.ChangedAt)
+		var entry models.HistoryEntry
+		err = rows.Scan(&entry.ID, &entry.Action, &entry.ItemID, &entry.UserID, &entry.UserRole, &entry.ChangedAt)
 		if err != nil {
 			return nil, err
 		}

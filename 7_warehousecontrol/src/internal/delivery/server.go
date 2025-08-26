@@ -6,7 +6,6 @@ import (
 	"time"
 	"warehousecontrol/src/internal/config"
 	"warehousecontrol/src/internal/models"
-	"warehousecontrol/src/internal/repo"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -28,7 +27,9 @@ type AuthService interface {
 }
 
 type HistoryService interface {
-	GetHistory(ctx context.Context, role models.Role, filterByUserID string, filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time, filterByUserRole string, limit, offset int64) ([]repo.HistoryEntry, error)
+	GetHistory(ctx context.Context, role models.Role, filterByUserID string,
+		filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time,
+		filterByUserRole string, limit, offset int64) ([]models.HistoryEntry, error)
 }
 
 type Server struct {

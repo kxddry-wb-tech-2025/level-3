@@ -11,7 +11,7 @@ import (
 )
 
 type Repository interface {
-	GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]repo.HistoryEntry, error)
+	GetHistory(ctx context.Context, args *repo.HistoryArgs) ([]models.HistoryEntry, error)
 }
 
 type Usecase struct {
@@ -22,7 +22,11 @@ func NewUsecase(repo Repository) *Usecase {
 	return &Usecase{repo: repo}
 }
 
-func (u *Usecase) GetHistory(ctx context.Context, role models.Role, filterByUserID string, filterByItemID string, filterByAction string, filterDateFrom time.Time, filterDateTo time.Time, filterByUserRole string, limit, offset int64) ([]repo.HistoryEntry, error) {
+func (u *Usecase) GetHistory(
+	ctx context.Context, role models.Role, filterByUserID string,
+	filterByItemID string, filterByAction string, filterDateFrom time.Time,
+	filterDateTo time.Time, filterByUserRole string, limit, offset int64,
+) ([]models.HistoryEntry, error) {
 	if role == models.RoleUser {
 		return nil, fmt.Errorf("%w: user role cannot access history", models.ErrForbidden)
 	}
