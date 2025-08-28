@@ -62,6 +62,7 @@ A high-performance URL shortening service built with Go, featuring automatic Red
 2. **Start services**
    ```bash
    docker-compose up -d
+   go run ./cmd/main
    ```
 
 3. **Access the service**
