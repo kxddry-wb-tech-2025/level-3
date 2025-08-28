@@ -2,11 +2,14 @@ package api
 
 import (
 	"context"
+	"net/http"
 	"shortener/internal/domain"
 	"shortener/internal/validator"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/kxddry/wbf/ginext"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // URLStorage is the interface for the URL storage.
@@ -68,6 +71,12 @@ func (s *Server) RegisterRoutes(ctx context.Context) {
 	s.g.POST("/shorten", s.postShorten(ctx))
 	s.g.GET("/s/:short_code", s.getShorten(ctx))
 	s.g.GET("/analytics/:short_code", s.getAnalytics())
+
+	s.g.GET("/health", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	s.g.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Static UI routes
 	s.g.Static("/ui", "./web")
