@@ -66,6 +66,7 @@ func (w *Worker) Handle(ctx context.Context, ch <-chan *domain.KafkaMessage) {
 			file, err := w.fs.Get(ctx, task.FileName)
 			if err != nil {
 				zlog.Logger.Err(err).Str("op", op).Msg("failed to get file")
+				continue
 			}
 
 			if err := w.st.UpdateStatus(ctx, task.FileName, domain.StatusRunning); err != nil {
